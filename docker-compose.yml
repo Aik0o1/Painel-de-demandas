@@ -26,16 +26,11 @@ services:
     restart: always
     environment:
       - DATABASE_URL=postgresql://postgres:password@db:5432/demand_navigator
-      # Pode sobrepor outras variáveis do .env aqui se necessário
-    # env_file:
-    #   - ./backend/.env
-    ports:
-      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/')\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -44,11 +39,8 @@ services:
     build: ./frontend
     container_name: demand_navigator_frontend
     restart: always
-    environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/demand_navigator
-      - NEXT_PUBLIC_API_URL=http://backend:8000/api
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       - backend
 
