@@ -1,30 +1,37 @@
-# frontend/Dockerfile
-FROM node:20 AS builder
-
+# Stage 1: Dependências
+FROM node:20-alpine AS deps
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Instala openssl necessário para o Prisma
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-
-# Copia arquivos do package manager primeiro
-COPY package*.json ./
-COPY prisma ./prisma/
-
-# Instala dependências e gera o Prisma Client
-RUN npm install
-RUN npx prisma generate
-
-# Copia o restante do código
+# Stage 2: Build
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
+# Desabilita o envio de telemetria durante o build
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-FROM nginx:alpine
+# Stage 3: Runner
+FROM node:20-alpine AS runner
+WORKDIR /app
 
-RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/out /usr/share/nginx/html
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-EXPOSE 80
+# Configuração de usuário não-root (boa prática)
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-CMD ["nginx", "-g", "daemon off;"]
+# O modo standalone gera apenas o essencial
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+EXPOSE 3000
+ENV PORT=3000
+
+# Executa o servidor stand-alone do Next.js
+CMD ["node", "server.js"]

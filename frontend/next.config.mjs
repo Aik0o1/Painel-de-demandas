@@ -2,8 +2,7 @@
 const nextConfig = {
     reactStrictMode: true,
     transpilePackages: ["lucide-react"],
-    output: 'export', // Habilita geração de arquivos estáticos para o Nginx
-    images: { unoptimized: true }, // Necessário para exportação estática
+    output: 'standalone', // Modo de alta performance para produção no Docker
 
 
     // Configuração de Rewrites (Proxy transparente)
