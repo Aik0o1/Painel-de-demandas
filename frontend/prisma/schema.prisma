@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  BLOCKED
+}
+
+
+
+
+
+enum LoginStatus {
+  SUCCESS
+  BLOCKED
+  LOGOUT
+  TERMINATED_BY_ADMIN
+}
+
+model User {
+  id              String      @id @default(uuid())
+  name            String
+  email           String      @unique
+  image           String?
+  role            String      @default("user")
+  cpf             String?     @unique
+  position        String?
+  function        String?
+  protocolNumber  String?     @unique
+  status          UserStatus  @default(PENDING)
+  permissions     Json?       @default("{}")
+  
+  // Relações
+  approvedById    String?
+  approvedBy      User?       @relation("ApprovedByUser", fields: [approvedById], references: [id])
+  approvedUsers   User[]      @relation("ApprovedByUser")
+  
+  approvedAt      DateTime?
+  passwordHash    String
+  sector_id       String?
+  
+  sessions        Session[]
+  loginAudits     LoginAudit[]
+  auditLogs       AuditLog[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model Session {
+  id                String    @id @default(uuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId         String    @unique
+  ipAddress         String?
+  userAgent         String?
+  isActive          Boolean   @default(true)
+  terminatedByAdmin Boolean   @default(false)
+  terminatedAt      DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model LoginAudit {
+  id          String      @id @default(uuid())
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email       String
+  ipAddress   String?
+  userAgent   String?
+  status      LoginStatus
+  loginAt     DateTime    @default(now())
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  userId      String?
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userName    String?
+  userEmail   String?
+  action      String
+  module      String
+  description String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+
+  createdAt   DateTime  @default(now())
+}
+
