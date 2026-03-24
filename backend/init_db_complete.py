@@ -31,11 +31,16 @@ async def init_db():
         if not result.scalars().first():
             print("Populando setores padrão...")
             setores = [
-                "TI", "Comunicação", "Financeiro", "Administrativo", 
-                "Procuradoria", "Registro", "Presidência"
+                {"name": "TI", "slug": "ti"},
+                {"name": "Comunicação", "slug": "comunicacao"},
+                {"name": "Financeiro", "slug": "financeiro"},
+                {"name": "Administrativo", "slug": "administrativo"},
+                {"name": "Procuradoria", "slug": "procuradoria"},
+                {"name": "Registro", "slug": "registro"},
+                {"name": "Presidência", "slug": "presidencia"}
             ]
-            for s_name in setores:
-                session.add(Sector(id=str(uuid.uuid4()), name=s_name))
+            for s_data in setores:
+                session.add(Sector(id=str(uuid.uuid4()), name=s_data["name"], slug=s_data["slug"]))
             await session.commit()
             print("Setores criados.")
 
