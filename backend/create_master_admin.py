@@ -33,12 +33,12 @@ def create_admin():
             print(f"Erro: Usuário com email {admin_email} já existe.")
             return
 
-        # Insert User
+        # Insert User (incluindo createdAt e updatedAt explicitamente para evitar erros de constraint)
         user_id = str(uuid4())
         cur.execute("""
             INSERT INTO "User" (
-                id, name, email, "passwordHash", role, status, cpf, position, "function", "protocolNumber", "updatedAt"
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                id, name, email, "passwordHash", role, status, cpf, position, "function", "protocolNumber", "createdAt", "updatedAt"
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
         """, (
             user_id, 
             admin_name, 
