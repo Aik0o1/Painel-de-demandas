@@ -21,6 +21,15 @@ async def init_db():
     async with engine.begin() as conn:
         # Cria todas as tabelas definidas em models_sql.py (demands, tickets, payments, etc.)
         await conn.run_sync(Base.metadata.create_all)
+        
+        # Garante que a coluna slug existe (caso a tabela já tenha sido criada sem ela)
+        from sqlalchemy import text
+        try:
+            await conn.execute(text("ALTER TABLE sectors ADD COLUMN IF NOT EXISTS slug VARCHAR(50)"))
+            print("Garantido que a coluna 'slug' existe em 'sectors'.")
+        except Exception as e:
+            print(f"Nota: Erro ao tentar adicionar coluna slug (talvez já exista): {e}")
+
     print("Tabelas criadas com sucesso!")
 
     print("Verificando dados iniciais...")
