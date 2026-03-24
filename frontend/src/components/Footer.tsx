@@ -1,4 +1,3 @@
-import { Separator } from "../ui/separator";
 import React from 'react';
 
 const Footer = () => {
