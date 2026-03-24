@@ -90,7 +90,8 @@ async def create_demand(demand: DemandCreate, x_user_email: Optional[str] = Head
         due_date = None
         if demand.due_date:
             try:
-                due_date = datetime.fromisoformat(demand.due_date.replace("Z", "+00:00"))
+                dt = datetime.fromisoformat(demand.due_date.replace("Z", "+00:00"))
+                due_date = dt.replace(tzinfo=None)
             except:
                 due_date = None
 
@@ -141,13 +142,15 @@ async def update_demand(id: str, update_data: DemandUpdate, db_session: AsyncSes
     if "due_date" in data:
         if data["due_date"]:
             try:
-                demand.dueDate = datetime.fromisoformat(data["due_date"].replace("Z", "+00:00"))
+                dt = datetime.fromisoformat(data["due_date"].replace("Z", "+00:00"))
+                demand.dueDate = dt.replace(tzinfo=None)
             except:
                 pass
     if "completed_at" in data:
         if data["completed_at"]:
             try:
-                demand.completedAt = datetime.fromisoformat(data["completed_at"].replace("Z", "+00:00"))
+                dt = datetime.fromisoformat(data["completed_at"].replace("Z", "+00:00"))
+                demand.completedAt = dt.replace(tzinfo=None)
             except:
                 pass
 
