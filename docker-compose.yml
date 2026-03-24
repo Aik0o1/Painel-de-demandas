@@ -18,7 +18,7 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - demand_navigator_db_data:/var/lib/postgresql/data
 
   backend:
     build: ./backend
@@ -65,4 +65,4 @@ services:
       - db
 
 volumes:
-  postgres_data:
+  demand_navigator_db_data:
