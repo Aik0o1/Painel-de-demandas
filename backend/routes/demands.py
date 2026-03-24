@@ -113,6 +113,9 @@ async def create_demand(demand: DemandCreate, x_user_email: Optional[str] = Head
         
         return await format_demand(new_demand, db_session)
     except Exception as e:
+        import traceback
+        print(f"CRITICAL ERROR in create_demand: {e}")
+        traceback.print_exc()
         await db_session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
