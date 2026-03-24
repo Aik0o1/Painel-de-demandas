@@ -40,10 +40,10 @@ services:
     container_name: demand_navigator_frontend
     restart: always
     ports:
-      - "3000:3000"
+      - "8080:8080"
     environment:
       - NEXT_PUBLIC_API_URL=http://backend:8001
-      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_URL=http://localhost:8080
       - NEXTAUTH_SECRET=al-eT3JbEwLKT7kU5gtSDI1JK3YyFCKu9cdV3G3SMDdCnn
     depends_on:
       - backend
@@ -56,7 +56,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
-      - "8080:80"
+      - "5050:80"
     depends_on:
       - db
 
