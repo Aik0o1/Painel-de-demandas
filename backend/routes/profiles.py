@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Header, Depends
+from fastapi import APIRouter, HTTPException, status, Header, Depends, File, UploadFile
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +10,8 @@ from passlib.context import CryptContext
 import os
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import uuid
+import shutil
 
 router = APIRouter()
 
@@ -91,3 +93,41 @@ async def change_password(
     await db_session.commit()
     
     return {"success": True}
+
+@router.post("/upload")
+async def upload_avatar(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db_session: AsyncSession = Depends(get_db)
+):
+    # Validar extensão
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp"]:
+        raise HTTPException(status_code=400, detail="Formato de arquivo inválido. Use JPG, PNG ou WEBP.")
+
+    # Criar nome único
+    filename = f"avatar_{user.id}_{uuid.uuid4().hex}{ext}"
+    upload_dir = os.path.join("uploads", "avatars")
+    os.makedirs(upload_dir, exist_ok=True)
+    filepath = os.path.join(upload_dir, filename)
+
+    # Deletar avatar antigo se existir e for local
+    if user.image and user.image.startswith("/api/uploads/avatars/"):
+        old_filename = user.image.split("/")[-1]
+        old_path = os.path.join(upload_dir, old_filename)
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except:
+                pass
+
+    # Salvar novo arquivo
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Atualizar banco
+    avatar_url = f"/api/uploads/avatars/{filename}"
+    user.image = avatar_url
+    await db_session.commit()
+
+    return {"url": avatar_url}

@@ -7,89 +7,63 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserStatus {
-  PENDING
-  ACTIVE
-  REJECTED
-  BLOCKED
-}
-
-
-
-
-
-enum LoginStatus {
-  SUCCESS
-  BLOCKED
-  LOGOUT
-  TERMINATED_BY_ADMIN
-}
-
 model User {
-  id              String      @id @default(uuid())
-  name            String
-  email           String      @unique
-  image           String?
-  role            String      @default("user")
-  cpf             String?     @unique
-  position        String?
-  function        String?
-  protocolNumber  String?     @unique
-  status          UserStatus  @default(PENDING)
-  permissions     Json?       @default("{}")
-  
-  // Relações
-  approvedById    String?
-  approvedBy      User?       @relation("ApprovedByUser", fields: [approvedById], references: [id])
-  approvedUsers   User[]      @relation("ApprovedByUser")
-  
-  approvedAt      DateTime?
-  passwordHash    String
-  sector_id       String?
-  
-  sessions        Session[]
-  loginAudits     LoginAudit[]
-  auditLogs       AuditLog[]
-
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id             String       @id @default(uuid())
+  name           String
+  email          String       @unique
+  image          String?
+  role           String       @default("user")
+  cpf            String?      @unique
+  position       String?
+  function       String?
+  protocolNumber String?      @unique
+  status         UserStatus   @default(PENDING)
+  permissions    Json?        @default("{}")
+  approvedById   String?
+  approvedAt     DateTime?
+  passwordHash   String
+  sector_id      String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  auditLogs      AuditLog[]
+  loginAudits    LoginAudit[]
+  sessions       Session[]
+  approvedBy     User?        @relation("ApprovedByUser", fields: [approvedById], references: [id])
+  approvedUsers  User[]       @relation("ApprovedByUser")
 }
 
 model Session {
   id                String    @id @default(uuid())
   userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   sessionId         String    @unique
   ipAddress         String?
   userAgent         String?
   isActive          Boolean   @default(true)
   terminatedByAdmin Boolean   @default(false)
   terminatedAt      DateTime?
-
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model LoginAudit {
-  id          String      @id @default(uuid())
-  userId      String?
-  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
-  email       String
-  ipAddress   String?
-  userAgent   String?
-  status      LoginStatus
-  loginAt     DateTime    @default(now())
-
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String      @id @default(uuid())
+  userId    String?
+  email     String
+  ipAddress String?
+  userAgent String?
+  status    LoginStatus
+  loginAt   DateTime    @default(now())
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  user      User?       @relation(fields: [userId], references: [id])
 }
 
 model AuditLog {
-  id          String      @id @default(uuid())
+  id          String   @id @default(uuid())
   userId      String?
-  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   userName    String?
   userEmail   String?
   action      String
@@ -98,7 +72,183 @@ model AuditLog {
   ipAddress   String?
   userAgent   String?
   metadata    Json?
-
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id])
 }
 
+model admin_configs {
+  id        String   @id @db.VarChar(36)
+  key       String   @unique @db.VarChar(100)
+  value     Json
+  createdAt DateTime @db.Timestamp(6)
+  updatedAt DateTime @db.Timestamp(6)
+}
+
+model budget_categories {
+  id             String     @id @db.VarChar(36)
+  name           String     @db.VarChar(255)
+  totalAllocated Float
+  createdAt      DateTime   @db.Timestamp(6)
+  updatedAt      DateTime   @db.Timestamp(6)
+  payments       payments[]
+}
+
+model contracts {
+  id        String    @id @db.VarChar(36)
+  title     String    @db.VarChar(255)
+  supplier  String    @db.VarChar(255)
+  value     Float
+  endDate   DateTime? @db.Timestamp(6)
+  sectorId  String?   @db.VarChar(36)
+  status    String    @db.VarChar(20)
+  createdAt DateTime  @db.Timestamp(6)
+  updatedAt DateTime  @db.Timestamp(6)
+}
+
+model demands {
+  id          String    @id @db.VarChar(36)
+  title       String    @db.VarChar(255)
+  description String?
+  priority    String    @db.VarChar(20)
+  status      String    @db.VarChar(20)
+  assignedTo  String?   @db.VarChar(255)
+  dueDate     DateTime? @db.Timestamp(6)
+  createdBy   String    @db.VarChar(255)
+  completedAt DateTime? @db.Timestamp(6)
+  createdAt   DateTime  @db.Timestamp(6)
+  updatedAt   DateTime  @db.Timestamp(6)
+}
+
+model employees {
+  id            String    @id @db.VarChar(36)
+  fullName      String    @db.VarChar(255)
+  position      String    @db.VarChar(255)
+  department    String    @db.VarChar(255)
+  admissionDate DateTime? @db.Timestamp(6)
+  status        String    @db.VarChar(20)
+  createdAt     DateTime  @db.Timestamp(6)
+  updatedAt     DateTime  @db.Timestamp(6)
+}
+
+model inventory_items {
+  id        String   @id @db.VarChar(36)
+  code      String   @unique @db.VarChar(50)
+  name      String   @db.VarChar(255)
+  category  String   @db.VarChar(100)
+  location  String?  @db.VarChar(255)
+  status    String   @db.VarChar(20)
+  createdAt DateTime @db.Timestamp(6)
+  updatedAt DateTime @db.Timestamp(6)
+}
+
+model payments {
+  id                String            @id @db.VarChar(36)
+  description       String            @db.VarChar(255)
+  amount            Float
+  date              DateTime          @db.Timestamp(6)
+  supplier          String            @db.VarChar(255)
+  status            String            @db.VarChar(20)
+  attachmentUrl     String?           @db.VarChar(1024)
+  categoryId        String            @db.VarChar(36)
+  beneficiaries     Json?
+  passenger         String?           @db.VarChar(255)
+  route             String?           @db.VarChar(255)
+  createdAt         DateTime          @db.Timestamp(6)
+  updatedAt         DateTime          @db.Timestamp(6)
+  budget_categories budget_categories @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model processes {
+  id            String    @id @db.VarChar(36)
+  processNumber String    @unique @db.VarChar(50)
+  title         String    @db.VarChar(255)
+  partyName     String?   @db.VarChar(255)
+  court         String?   @db.VarChar(255)
+  deadlineDate  DateTime? @db.Timestamp(6)
+  status        String    @db.VarChar(20)
+  description   String?
+  createdAt     DateTime  @db.Timestamp(6)
+  updatedAt     DateTime  @db.Timestamp(6)
+}
+
+model projects {
+  id          String    @id @db.VarChar(36)
+  title       String    @db.VarChar(255)
+  description String?
+  priority    String    @db.VarChar(20)
+  status      String    @db.VarChar(20)
+  startDate   DateTime? @db.Timestamp(6)
+  endDate     DateTime? @db.Timestamp(6)
+  createdAt   DateTime  @db.Timestamp(6)
+  updatedAt   DateTime  @db.Timestamp(6)
+}
+
+model registry_entries {
+  id             String    @id @db.VarChar(36)
+  protocolNumber String    @db.VarChar(50)
+  documentType   String    @db.VarChar(100)
+  partyName      String    @db.VarChar(255)
+  deadlineDate   DateTime? @db.Timestamp(6)
+  status         String    @db.VarChar(20)
+  notes          String?
+  createdAt      DateTime  @db.Timestamp(6)
+  updatedAt      DateTime  @db.Timestamp(6)
+}
+
+model registry_reports {
+  id        String   @id @db.VarChar(36)
+  month     Int
+  year      Int
+  data      Json
+  createdAt DateTime @db.Timestamp(6)
+  updatedAt DateTime @db.Timestamp(6)
+}
+
+model sectors {
+  id          String   @id @db.VarChar(36)
+  name        String   @db.VarChar(255)
+  slug        String?  @db.VarChar(50)
+  description String?
+  createdAt   DateTime @db.Timestamp(6)
+  updatedAt   DateTime @db.Timestamp(6)
+}
+
+model tickets {
+  id                String    @id @db.VarChar(36)
+  title             String    @db.VarChar(255)
+  description       String?
+  requesterName     String?   @db.VarChar(255)
+  priority          String    @db.VarChar(20)
+  category          String    @db.VarChar(100)
+  subSector         String    @db.VarChar(100)
+  status            String    @db.VarChar(20)
+  accumulatedTimeMs Int
+  lastStartedAt     DateTime? @db.Timestamp(6)
+  pauseReason       String?
+  resolvedAt        DateTime? @db.Timestamp(6)
+  createdAt         DateTime  @db.Timestamp(6)
+  updatedAt         DateTime  @db.Timestamp(6)
+}
+
+model weekly_demands {
+  id            String   @id @db.VarChar(36)
+  sector        String   @db.VarChar(255)
+  content       String
+  lastUpdatedBy String   @db.VarChar(255)
+  createdAt     DateTime @db.Timestamp(6)
+  updatedAt     DateTime @db.Timestamp(6)
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  BLOCKED
+}
+
+enum LoginStatus {
+  SUCCESS
+  BLOCKED
+  LOGOUT
+  TERMINATED_BY_ADMIN
+}

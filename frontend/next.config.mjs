@@ -7,12 +7,14 @@ const nextConfig = {
 
     // Configuração de Rewrites (Proxy transparente)
     async rewrites() {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.FASTAPI_URL || 'http://backend:8001';
+        console.log(`[NextConfig] Definindo rewrite de /api/* para ${apiUrl}/api/*`);
         return [
             {
                 // Encaminha as chamadas para a API em Python,
                 // usando regex negativo (?!auth) para NOT interceptar as rotas nativas do NextAuth.
                 source: '/api/:path((?!auth/).*)',
-                destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8001'}/api/:path*`
+                destination: `${apiUrl}/api/:path*`
             }
         ];
     }

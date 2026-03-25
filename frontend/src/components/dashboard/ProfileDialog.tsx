@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { User, Mail, Settings, LogOut, X, ChevronRight, Lock, CreditCard, Briefcase, Loader2, KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { User, Mail, Settings, LogOut, X, ChevronRight, Lock, CreditCard, Briefcase, Loader2, KeyRound, Eye, EyeOff, CheckCircle2, AlertCircle, Camera } from "lucide-react";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { useCurrentProfile } from "@/hooks/useProfiles";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,9 +12,10 @@ interface ProfileDialogProps {
 }
 
 export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
-    const { profile, isLoading, updateProfile, changePassword } = useCurrentProfile();
+    const { profile, isLoading, updateProfile, changePassword, uploadAvatar } = useCurrentProfile();
     const { signOut, user } = useAuth();
     const { toast } = useToast();
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Editable states
     const [userPositionState, setUserPositionState] = useState("");
@@ -58,6 +59,34 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                 toast({
                     title: "Perfil atualizado",
                     description: "Suas informações foram salvas com sucesso.",
+                });
+            }
+        });
+    };
+
+    const handlePhotoClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        uploadAvatar.mutate(formData, {
+            onSuccess: () => {
+                toast({
+                    title: "Foto atualizada",
+                    description: "Sua foto de perfil foi alterada com sucesso.",
+                });
+            },
+            onError: (err: any) => {
+                toast({
+                    title: "Erro ao carregar foto",
+                    description: err.message || "Não foi possível carregar a imagem.",
+                    variant: "destructive"
                 });
             }
         });
@@ -150,18 +179,40 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
                                 <section className="flex flex-col items-center pt-6 pb-8 px-4 relative">
                                     <div className="relative group">
                                         <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-primary to-transparent opacity-75 blur-md group-hover:opacity-100 transition duration-500"></div>
-                                        <div className="relative rounded-full p-[2px] bg-gradient-to-b from-primary via-primary/50 to-transparent shadow-md">
+                                        <div 
+                                            onClick={handlePhotoClick}
+                                            className="relative rounded-full p-[2px] bg-gradient-to-b from-primary via-primary/50 to-transparent shadow-md cursor-pointer group/photo"
+                                        >
                                             <div className="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-28 w-28 border-4 border-background bg-zinc-800 flex items-center justify-center overflow-hidden">
-                                                {profile?.image || user?.image ? (
-                                                    <img src={profile?.image || user?.image || ''} alt="Profile" className="w-full h-full object-cover" />
+                                                {uploadAvatar.isPending ? (
+                                                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                                                ) : profile?.image || user?.image ? (
+                                                    <img 
+                                                        src={profile?.image || user?.image || ''} 
+                                                        alt="Profile" 
+                                                        className="w-full h-full object-cover group-hover/photo:opacity-40 transition-opacity" 
+                                                    />
                                                 ) : (
                                                     <User className="w-12 h-12 text-white/50" />
+                                                )}
+                                                
+                                                {!uploadAvatar.isPending && (
+                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity">
+                                                        <Camera className="w-8 h-8 text-white" />
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-background ring-2 ring-background">
                                             <div className="h-3 w-3 rounded-full bg-primary shadow-[0_0_8px_#10b981] animate-pulse"></div>
                                         </div>
+                                        <input 
+                                            type="file" 
+                                            ref={fileInputRef} 
+                                            onChange={handleFileChange} 
+                                            className="hidden" 
+                                            accept="image/*" 
+                                        />
                                     </div>
 
                                     <div className="flex flex-col items-center justify-center mt-5 space-y-1">

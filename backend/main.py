@@ -67,7 +67,8 @@ app.include_router(reports.router, prefix="/api/reports", tags=["Exportação de
 
 # Servir arquivos estáticos (Uploads)
 import os
-os.makedirs("uploads", exist_ok=True)
+os.makedirs("uploads/avatars", exist_ok=True)
+os.makedirs("uploads/documents", exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
