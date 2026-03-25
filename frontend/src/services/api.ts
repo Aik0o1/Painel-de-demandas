@@ -52,7 +52,9 @@ const handleResponse = async (response: Response, responseType?: string) => {
         const contentType = response.headers.get('content-type');
         const isJson = contentType && contentType.includes('application/json');
         const data = isJson ? await response.json() : await response.text();
-        const error = (data && data.message) || response.statusText;
+        
+        // FastAPI usa 'detail', outros podem usar 'message' ou 'error'
+        const error = (data && (data.detail || data.message || data.error)) || response.statusText;
         throw new Error(error);
     }
 

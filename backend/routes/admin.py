@@ -78,7 +78,8 @@ async def reset_password(data: ResetPasswordRequest, user: User = Depends(get_cu
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
     
     # Hash da nova senha usando bcrypt (mesmo padrão do NextAuth/Node)
-    hashed_password = pwd_context.hash(data.newPassword)
+    # Bcrypt tem um limite de 72 bytes; usamos encode para truncar nos BYTES corretamente.
+    hashed_password = pwd_context.hash(data.newPassword.encode("utf-8")[:72])
     target_user.passwordHash = hashed_password
     target_user.updatedAt = datetime.utcnow()
     

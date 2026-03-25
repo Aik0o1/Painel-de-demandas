@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const FASTAPI_BASE = process.env.FASTAPI_URL || 'http://127.0.0.1:8001';
+const FASTAPI_BASE = process.env.FASTAPI_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:8001';
 
 /**
  * Faz proxy de um Request do Next.js para o FastAPI backend.

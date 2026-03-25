@@ -72,6 +72,13 @@ export function useCurrentProfile() {
     },
   });
 
-  return { profile, isLoading, error, updateProfile, uploadAvatar };
+  const changePassword = useMutation<any, Error, any>({
+    mutationFn: async (data) => {
+      if (!user) throw new Error('Not authenticated');
+      return apiPost('/profile/change-password', data);
+    },
+  });
+
+  return { profile, isLoading, error, updateProfile, uploadAvatar, changePassword };
 }
 

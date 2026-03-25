@@ -49,8 +49,10 @@ async def login(credentials: LoginRequest, db_session: AsyncSession = Depends(ge
         )
     
     # Verifica se a senha corresponde ao hash (salvo pelo NextJS no db via bcryptjs)
+    # Bcrypt tem um limite de 72 bytes; usamos encode para truncar nos BYTES corretamente.
+    password = credentials.password.encode("utf-8")[:72]
     stored_hash = user.passwordHash
-    if not stored_hash or not pwd_context.verify(credentials.password, stored_hash):
+    if not stored_hash or not pwd_context.verify(password, stored_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciais inválidas ou senha incorreta"
