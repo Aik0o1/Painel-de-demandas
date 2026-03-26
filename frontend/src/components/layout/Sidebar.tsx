@@ -32,13 +32,13 @@ import { apiGet, apiPost } from '@/services/api';
 const navItems = [
   { title: 'Painel', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Demandas', url: '/demands', icon: ListTodo },
-  { title: 'Administração', url: '/admin', icon: ShieldCheck },
   { title: 'Comunicação', url: '/sectors/comunicacao', icon: MessageSquare },
   { title: 'Financeira', url: '/sectors/financeira', icon: Banknote },
   { title: 'Procuradoria', url: '/sectors/procuradoria', icon: Scale },
   { title: 'Registro', url: '/sectors/registro', icon: FolderArchive },
-  { title: 'Relatórios', url: '/reports', icon: FileText },
   { title: 'TI', url: '/sectors/ti', icon: Cpu },
+  { title: 'Relatórios', url: '/reports', icon: FileText },
+  { title: 'Administração', url: '/admin', icon: ShieldCheck },
 ];
 
 interface SidebarContentProps {
