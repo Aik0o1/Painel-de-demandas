@@ -3,8 +3,6 @@ from datetime import datetime
 from typing import Optional, List
 from sqlalchemy import String, DateTime, Boolean, ForeignKey, JSON, Enum as SQLEnum, Float, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import JSONB
-
 from .database_sql import Base
 
 import enum
@@ -32,17 +30,17 @@ class User(Base):
     cpf: Mapped[Optional[str]] = mapped_column(String(14), unique=True, nullable=True)
     position: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     function: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    protocolNumber: Mapped[Optional[str]] = mapped_column(String(50), unique=True, nullable=True)
+    protocolNumber: Mapped[Optional[str]] = mapped_column("protocol_number", String(50), unique=True, nullable=True)
     status: Mapped[UserStatus] = mapped_column(SQLEnum(UserStatus, name="UserStatus"), default=UserStatus.PENDING)
-    permissions: Mapped[dict] = mapped_column(JSONB, default={}, server_default="{}")
+    permissions: Mapped[dict] = mapped_column(JSON, default={}, server_default="{}")
     
-    approvedById: Mapped[Optional[str]] = mapped_column(ForeignKey("User.id"), nullable=True)
-    approvedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    passwordHash: Mapped[str] = mapped_column(String(255))
-    sector_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    approvedById: Mapped[Optional[str]] = mapped_column("approved_by_id", ForeignKey("User.id"), nullable=True)
+    approvedAt: Mapped[Optional[datetime]] = mapped_column("approved_at", DateTime, nullable=True)
+    passwordHash: Mapped[str] = mapped_column("password_hash", String(255))
+    sector_id: Mapped[Optional[str]] = mapped_column(ForeignKey("sectors.id"), nullable=True)
     
-    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
@@ -95,7 +93,7 @@ class AuditLog(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     ipAddress: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
     userAgent: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
-    metadata_json: Mapped[Optional[dict]] = mapped_column("metadata", JSONB, nullable=True)
+    metadata_json: Mapped[Optional[dict]] = mapped_column("metadata", JSON, nullable=True)
     
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -123,19 +121,19 @@ class Ticket(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    requesterName: Mapped[Optional[str]] = mapped_column(String(255), default="Usuário")
-    assignedToId: Mapped[Optional[str]] = mapped_column(ForeignKey("User.id"), nullable=True)
+    requesterName: Mapped[Optional[str]] = mapped_column("requester_name", String(255), default="Usuário")
+    assignedToId: Mapped[Optional[str]] = mapped_column("assigned_to_id", ForeignKey("User.id"), nullable=True)
     priority: Mapped[str] = mapped_column(String(20), default="MEDIUM")
     category: Mapped[str] = mapped_column(String(100))
-    subSector: Mapped[str] = mapped_column(String(100), default="support")
+    subSector: Mapped[str] = mapped_column("sub_sector", String(100), default="support")
     status: Mapped[str] = mapped_column(String(20), default="OPEN")
-    accumulatedTimeMs: Mapped[int] = mapped_column(Integer, default=0)
-    lastStartedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    pauseReason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    resolvedAt: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    accumulatedTimeMs: Mapped[int] = mapped_column("accumulated_time_ms", Integer, default=0)
+    lastStartedAt: Mapped[Optional[datetime]] = mapped_column("last_started_at", DateTime, nullable=True)
+    pauseReason: Mapped[Optional[str]] = mapped_column("pause_reason", Text, nullable=True)
+    resolvedAt: Mapped[Optional[datetime]] = mapped_column("resolved_at", DateTime, nullable=True)
     
-    createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    createdAt: Mapped[datetime] = mapped_column("created_at", DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column("updated_at", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     assignedTo = relationship("User", foreign_keys=[assignedToId])
@@ -174,7 +172,7 @@ class FinanceTransaction(Base):
     status: Mapped[str] = mapped_column(String(20), default="pending")
     attachmentUrl: Mapped[Optional[str]] = mapped_column(String(1024), nullable=True)
     categoryId: Mapped[str] = mapped_column(ForeignKey("budget_categories.id"))
-    beneficiaries: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    beneficiaries: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     passenger: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     route: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     
@@ -255,7 +253,7 @@ class RegistryReport(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     month: Mapped[int] = mapped_column(Integer)
     year: Mapped[int] = mapped_column(Integer)
-    data: Mapped[dict] = mapped_column(JSONB)
+    data: Mapped[dict] = mapped_column(JSON)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -263,7 +261,7 @@ class AdminConfig(Base):
     __tablename__ = "admin_configs"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     key: Mapped[str] = mapped_column(String(100), unique=True)
-    value: Mapped[dict] = mapped_column(JSONB)
+    value: Mapped[dict] = mapped_column(JSON)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

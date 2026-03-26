@@ -25,6 +25,7 @@ def format_profile(user: User):
         "image": user.image,
         "status": user.status,
         "sector_id": user.sector_id,
+        "permissions": user.permissions, # IMPORTANTE: Adicionado para o sidebar
         "cpf": user.cpf or "",
         "position": user.position or "",
         "function": user.function or "",
