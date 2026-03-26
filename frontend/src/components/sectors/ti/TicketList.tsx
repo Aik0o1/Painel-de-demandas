@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Plus, Monitor, AlertCircle, CheckCircle2 } from "lucide-react";
-import { TicketDialog } from "./TicketDialog";
+import TicketDialog from "./TicketDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -138,8 +138,11 @@ export function TicketList() {
             </div>
 
             <TicketDialog
-                open={isDialogOpen}
-                onOpenChange={setIsDialogOpen}
+                isOpen={isDialogOpen}
+                onClose={() => {
+                    setIsDialogOpen(false);
+                    setSelectedTicket(null);
+                }}
                 ticket={selectedTicket}
                 onSave={handleSave}
             />

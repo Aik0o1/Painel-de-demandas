@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
     Dialog,
@@ -13,17 +13,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/useAuth";
+import { apiGet } from "@/services/api";
 
 interface TicketDialogProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
+    isOpen: boolean;
+    onClose: () => void;
     ticket?: any;
-    onSave: (data: any) => Promise<void>;
+    onSave?: (data: any) => Promise<void>;
 }
 
-export function TicketDialog({ open, onOpenChange, ticket, onSave }: TicketDialogProps) {
+export default function TicketDialog({ isOpen, onClose, ticket, onSave }: TicketDialogProps) {
     const isEditing = !!ticket;
+    const { user } = useAuth();
+    const [tiUsers, setTiUsers] = useState<{ id: string, name: string }[]>([]);
     const { register, handleSubmit, reset, setValue, watch, formState: { isSubmitting } } = useForm();
+
+    useEffect(() => {
+        if (isOpen) {
+            const fetchTiUsers = async () => {
+                try {
+                    const users = await apiGet('/tickets/ti-users');
+                    setTiUsers(users);
+                } catch (error) {
+                    console.error("Erro ao carregar técnicos de TI:", error);
+                }
+            };
+            fetchTiUsers();
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (ticket) {
@@ -33,21 +51,27 @@ export function TicketDialog({ open, onOpenChange, ticket, onSave }: TicketDialo
             setValue("category", ticket.category);
             setValue("priority", ticket.priority);
             setValue("status", ticket.status);
+            setValue("assigned_to_id", ticket.assigned_to_id);
         } else {
             reset();
             setValue("status", "OPEN");
             setValue("priority", "MEDIUM");
+            if (user?.name) {
+                setValue("requester_name", user.name);
+            }
         }
-    }, [ticket, setValue, reset]);
+    }, [ticket, user, setValue, reset, isOpen]);
 
     const onSubmit = async (data: any) => {
-        await onSave({ ...ticket, ...data });
-        onOpenChange(false);
+        if (onSave) {
+            await onSave({ ...ticket, ...data });
+        }
+        onClose();
         reset();
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle>{isEditing ? "Editar Chamado" : "Novo Chamado Técnico"}</DialogTitle>
@@ -111,6 +135,24 @@ export function TicketDialog({ open, onOpenChange, ticket, onSave }: TicketDialo
                                 <SelectItem value="WAITING_USER">Aguardando Usuário</SelectItem>
                                 <SelectItem value="RESOLVED">Resolvido</SelectItem>
                                 <SelectItem value="CLOSED">Fechado</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="assigned_to_id" className="text-right">Atribuído a</Label>
+                        <Select 
+                            onValueChange={(val) => setValue("assigned_to_id", val === "none" ? null : val)} 
+                            defaultValue={ticket?.assigned_to_id || ""}
+                        >
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Selecione um técnico..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">Não atribuído</SelectItem>
+                                {tiUsers.map((u) => (
+                                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>

@@ -124,6 +124,7 @@ class Ticket(Base):
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     requesterName: Mapped[Optional[str]] = mapped_column(String(255), default="Usuário")
+    assignedToId: Mapped[Optional[str]] = mapped_column(ForeignKey("User.id"), nullable=True)
     priority: Mapped[str] = mapped_column(String(20), default="MEDIUM")
     category: Mapped[str] = mapped_column(String(100))
     subSector: Mapped[str] = mapped_column(String(100), default="support")
@@ -135,6 +136,9 @@ class Ticket(Base):
     
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    assignedTo = relationship("User", foreign_keys=[assignedToId])
 
 class InventoryItem(Base):
     __tablename__ = "inventory_items"

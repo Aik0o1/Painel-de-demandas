@@ -18,7 +18,11 @@ import {
     Wrench,
     X,
     Loader2,
-    ClipboardCheck
+    ClipboardCheck,
+    User as UserIcon,
+    Calendar,
+    Edit2,
+    History
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -26,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { FuturisticModal, FuturisticInput, FuturisticSelect, FuturisticTextarea, FuturisticButton } from "@/components/ui/futuristic-modal";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { apiGet, apiPost, apiPatch } from "@/services/api";
+import AssigneeDialog from "@/components/sectors/ti/AssigneeDialog";
 
 const formatDuration = (ms: number) => {
     if (!ms) return "0h 0m";
@@ -157,6 +162,19 @@ export default function TiPage() {
         onError: () => toast.error("Erro ao registrar demanda.")
     });
 
+    const assignMutation = useMutation({
+        mutationFn: async ({ id, userId }: { id: string, userId: string }) => {
+            return apiPatch(`/tickets/${id}`, { assigned_to_id: userId });
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['tickets'] });
+            setIsEditDialogOpen(false);
+            setSelectedTicket(null);
+            toast.success("Responsável atribuído com sucesso!");
+        },
+        onError: () => toast.error("Erro ao atribuir responsável.")
+    });
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         createMutation.mutate(formData);
@@ -201,6 +219,8 @@ export default function TiPage() {
 
     // Active Tab State
     const [activeTab, setActiveTab] = useState("support");
+    const [selectedTicket, setSelectedTicket] = useState<any>(null);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
     // Filter tickets based on active tab
     const filteredTickets = tickets.filter((t: any) => t.sub_sector === activeTab);
@@ -421,11 +441,32 @@ export default function TiPage() {
                                                         <span className="flex items-center">
                                                             <span className="font-medium mr-1 text-foreground/80">Solicitante:</span> {ticket.requester_name}
                                                         </span>
+                                                        {ticket.assigned_to && (
+                                                            <span className="flex items-center text-primary font-medium">
+                                                                <UserIcon className="w-3 h-3 mr-1" />
+                                                                {ticket.assigned_to.name}
+                                                            </span>
+                                                        )}
                                                         {ticket.accumulated_time_ms > 0 && (
                                                             <span className="text-primary font-medium flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-full">
                                                                 ⏱ {formatDuration(ticket.accumulated_time_ms + (ticket.last_started_at ? (new Date().getTime() - new Date(ticket.last_started_at).getTime()) : 0))}
                                                             </span>
                                                         )}
+                                                    </div>
+                                                    <div className="mt-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 text-[10px] text-muted-foreground hover:bg-muted/50 hover:text-primary px-2 transition-all duration-200"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedTicket(ticket);
+                                                                setIsEditDialogOpen(true);
+                                                            }}
+                                                        >
+                                                            <UserIcon className="w-3 h-3 mr-1" />
+                                                            Atribuir Responsável
+                                                        </Button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -483,6 +524,20 @@ export default function TiPage() {
                                 </DialogFooter>
                             </DialogContent>
                         </Dialog>
+
+                        <AssigneeDialog
+                            isOpen={isEditDialogOpen}
+                            onClose={() => {
+                                setIsEditDialogOpen(false);
+                                setSelectedTicket(null);
+                            }}
+                            ticket={selectedTicket}
+                            onAssign={async (userId) => {
+                                if (selectedTicket) {
+                                    await assignMutation.mutateAsync({ id: selectedTicket.id, userId });
+                                }
+                            }}
+                        />
                     </div>
                 </div>
                 
