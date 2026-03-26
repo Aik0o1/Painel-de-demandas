@@ -65,7 +65,7 @@ export function DemandFilters({
         </div>
 
         <Select value={status} onValueChange={onStatusChange}>
-          <SelectTrigger className="input-focus w-full md:w-[180px] justify-center text-center [&>span]:w-full [&>span]:text-center">
+          <SelectTrigger className="input-focus w-full md:w-[180px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -77,7 +77,7 @@ export function DemandFilters({
         </Select>
 
         <Select value={priority} onValueChange={onPriorityChange}>
-          <SelectTrigger className="input-focus w-full md:w-[180px] justify-center text-center [&>span]:w-full [&>span]:text-center">
+          <SelectTrigger className="input-focus w-full md:w-[200px]">
             <SelectValue placeholder="Prioridade" />
           </SelectTrigger>
           <SelectContent>
@@ -90,7 +90,7 @@ export function DemandFilters({
         </Select>
 
         <Select value={assignee} onValueChange={onAssigneeChange}>
-          <SelectTrigger className="input-focus w-full md:w-[200px] justify-center text-center [&>span]:w-full [&>span]:text-center">
+          <SelectTrigger className="input-focus w-full md:w-[220px]">
             <SelectValue placeholder="Responsável" />
           </SelectTrigger>
           <SelectContent>
