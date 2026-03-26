@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import joinedload
 from core.database_sql import get_db
-from core.models_sql import User, Ticket
+from core.models_sql import User, Ticket, Sector
 from core.security import get_current_user, check_permission
 import uuid
 
@@ -55,13 +55,30 @@ async def get_ti_users(
     current_user: User = Depends(get_current_user),
     db_session: AsyncSession = Depends(get_db)
 ):
-    # Setor de TI ID fixo baseado no banco ou dinâmico? Melhor usar o ID que descobrimos.
-    # Mas ideal seria buscar pelo slug "tecnologia-da-informacao" se existisse.
-    # Vou filtrar pela role ou setor.
-    TI_SECTOR_ID = "91037c35-9650-475b-972f-5d577001d9ad"
-    result = await db_session.execute(
-        select(User).where(User.sector_id == TI_SECTOR_ID).order_by(User.name.asc())
+    """
+    Retorna os usuários que pertencem ao setor de TI (slug: 'ti').
+    Busca dinâmica para evitar problemas com IDs fixos.
+    """
+    # 1. Busca o setor de TI pelo slug
+    ti_sector_result = await db_session.execute(
+        select(Sector).where(Sector.slug == "ti")
     )
+    ti_sector = ti_sector_result.scalar_one_or_none()
+    
+    if not ti_sector:
+        # Fallback para o ID que estava sendo usado se o slug não existir
+        TI_FALLBACK_ID = "91037c35-9650-475b-972f-5d577001d9ad"
+        result = await db_session.execute(
+            select(User).where(User.sector_id == TI_FALLBACK_ID).order_by(User.name.asc())
+        )
+    else:
+        # 2. Busca os usuários associados a esse setor
+        result = await db_session.execute(
+            select(User)
+            .where(User.sector_id == ti_sector.id)
+            .order_by(User.name.asc())
+        )
+    
     users = result.scalars().all()
     return [{"id": u.id, "name": u.name} for u in users]
 
