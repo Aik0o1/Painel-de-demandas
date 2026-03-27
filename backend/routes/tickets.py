@@ -3,12 +3,13 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import joinedload
 from core.database_sql import get_db
-from core.models_sql import User, Ticket, Sector
+from core.models_sql import User, Ticket, Sector, UserStatus
 from core.security import get_current_user, check_permission
 import uuid
+import logging
 
 router = APIRouter()
 
@@ -56,30 +57,62 @@ async def get_ti_users(
     db_session: AsyncSession = Depends(get_db)
 ):
     """
-    Retorna os usuários que pertencem ao setor de TI (slug: 'ti').
-    Busca dinâmica para evitar problemas com IDs fixos.
+    Retorna os usuários que pertencem ao setor de TI.
+    Estratégias (em ordem de prioridade):
+      1. Busca pelo slug = 'ti'
+      2. Busca pelo nome (case-insensitive) contendo 'tecnologia' ou 'informacao'/'informação'
+      3. Fallback: todos os usuários ATIVOS do sistema
     """
-    # 1. Busca o setor de TI pelo slug
-    ti_sector_result = await db_session.execute(
+    logger = logging.getLogger(__name__)
+
+    ti_sector = None
+
+    # Estratégia 1: pelo slug
+    result_slug = await db_session.execute(
         select(Sector).where(Sector.slug == "ti")
     )
-    ti_sector = ti_sector_result.scalar_one_or_none()
-    
+    ti_sector = result_slug.scalar_one_or_none()
+
+    # Estratégia 2: pelo nome (slug pode ser NULL no servidor)
     if not ti_sector:
-        # Fallback para o ID que estava sendo usado se o slug não existir
-        TI_FALLBACK_ID = "91037c35-9650-475b-972f-5d577001d9ad"
-        result = await db_session.execute(
-            select(User).where(User.sector_id == TI_FALLBACK_ID).order_by(User.name.asc())
+        result_name = await db_session.execute(
+            select(Sector).where(
+                func.lower(Sector.name).contains("tecnologia")
+            )
         )
-    else:
-        # 2. Busca os usuários associados a esse setor
-        result = await db_session.execute(
+        ti_sector = result_name.scalar_one_or_none()
+        if ti_sector:
+            logger.warning(f"[ti-users] Setor TI encontrado por nome, não por slug. sector_id={ti_sector.id}")
+
+    # Estratégia 3: sem setor identificado - retorna todos os usuários ATIVOS
+    if not ti_sector:
+        logger.warning("[ti-users] Setor TI não encontrado nem por slug nem por nome. Retornando todos os usuários ativos.")
+        result_all = await db_session.execute(
             select(User)
-            .where(User.sector_id == ti_sector.id)
+            .where(User.status == UserStatus.ACTIVE)
             .order_by(User.name.asc())
         )
-    
+        users = result_all.scalars().all()
+        return [{"id": u.id, "name": u.name} for u in users]
+
+    # Busca usuários do setor encontrado
+    result = await db_session.execute(
+        select(User)
+        .where(User.sector_id == ti_sector.id)
+        .order_by(User.name.asc())
+    )
     users = result.scalars().all()
+
+    # Se o setor existe mas não tem usuários vinculados, retorna todos os ativos
+    if not users:
+        logger.warning(f"[ti-users] Setor TI (id={ti_sector.id}) não tem usuários com sector_id vinculado. Retornando todos os usuários ativos.")
+        result_all = await db_session.execute(
+            select(User)
+            .where(User.status == UserStatus.ACTIVE)
+            .order_by(User.name.asc())
+        )
+        users = result_all.scalars().all()
+
     return [{"id": u.id, "name": u.name} for u in users]
 
 @router.get("", status_code=status.HTTP_200_OK)
