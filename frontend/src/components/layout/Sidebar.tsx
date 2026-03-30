@@ -15,7 +15,8 @@ import {
   Banknote,
   Scale,
   FolderArchive,
-  Cpu
+  Cpu,
+  FileStack
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/layout/NotificationCenter';
 import { NavLink } from '@/components/NavLink';
@@ -38,7 +39,7 @@ const navItems = [
   { title: 'Registro', url: '/sectors/registro', icon: FolderArchive },
   { title: 'TI', url: '/sectors/ti', icon: Cpu },
   { title: 'Relatórios', url: '/reports', icon: FileText },
-  { title: 'Administração', url: '/admin', icon: ShieldCheck },
+  { title: 'Gerenciamento', url: '/admin', icon: ShieldCheck },
 ];
 
 interface SidebarContentProps {
@@ -90,6 +91,10 @@ export function SidebarContent({ className, onItemClick }: SidebarContentProps) 
     // For other routes (Reports, etc), use specific permissions if they exist
     if (item.url === '/reports') {
       return !!profile.permissions?.relatorios?.read;
+    }
+
+    if (item.url === '/ti/reports') {
+      return profile.sector_id === 'ti' || !!profile.permissions?.ti?.read;
     }
 
     // "Painel" and "Demandas" are visible to all authenticated users

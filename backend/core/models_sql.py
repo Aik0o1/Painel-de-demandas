@@ -275,3 +275,34 @@ class WeeklyDemand(Base):
     lastUpdatedBy: Mapped[str] = mapped_column("lastUpdatedBy", String(255))
     createdAt: Mapped[datetime] = mapped_column("createdAt", DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column("updatedAt", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class ItReportDirectory(Base):
+    __tablename__ = "it_report_directories"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name: Mapped[str] = mapped_column(String(255))
+    parentId: Mapped[Optional[str]] = mapped_column("parentId", String(36), ForeignKey("it_report_directories.id", ondelete="CASCADE"), nullable=True)
+    createdBy: Mapped[Optional[str]] = mapped_column("createdBy", String(255), nullable=True)
+    createdAt: Mapped[datetime] = mapped_column("createdAt", DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column("updatedAt", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships (self-referential)
+    children = relationship("ItReportDirectory", cascade="all, delete-orphan",
+                            primaryjoin="ItReportDirectory.parentId == ItReportDirectory.id",
+                            foreign_keys="ItReportDirectory.parentId")
+    files = relationship("ItReport", back_populates="directory", cascade="all, delete-orphan")
+
+class ItReport(Base):
+    __tablename__ = "it_reports"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name: Mapped[str] = mapped_column(String(255))
+    originalName: Mapped[str] = mapped_column("originalName", String(255))
+    filePath: Mapped[str] = mapped_column("filePath", String(1024))
+    fileSize: Mapped[int] = mapped_column("fileSize", Integer, default=0)
+    mimeType: Mapped[Optional[str]] = mapped_column("mimeType", String(255), nullable=True)
+    directoryId: Mapped[Optional[str]] = mapped_column("directoryId", String(36), ForeignKey("it_report_directories.id", ondelete="SET NULL"), nullable=True)
+    uploadedBy: Mapped[Optional[str]] = mapped_column("uploadedBy", String(255), nullable=True)
+    createdAt: Mapped[datetime] = mapped_column("createdAt", DateTime, default=datetime.utcnow)
+    updatedAt: Mapped[datetime] = mapped_column("updatedAt", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    directory = relationship("ItReportDirectory", back_populates="files")

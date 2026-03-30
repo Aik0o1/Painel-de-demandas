@@ -29,8 +29,9 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { FuturisticModal, FuturisticInput, FuturisticSelect, FuturisticTextarea, FuturisticButton } from "@/components/ui/futuristic-modal";
 import { RoleGuard } from "@/components/auth/RoleGuard";
-import { apiGet, apiPost, apiPatch } from "@/services/api";
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/api";
 import AssigneeDialog from "@/components/sectors/ti/AssigneeDialog";
+import TiReports from "@/components/sectors/ti/TiReports";
 
 const formatDuration = (ms: number) => {
     if (!ms) return "0h 0m";
@@ -253,7 +254,8 @@ export default function TiPage() {
                                     { id: 'support', label: 'Suporte' },
                                     { id: 'infrastructure', label: 'Infraestrutura' },
                                     { id: 'integration', label: 'Integração' },
-                                    { id: 'development', label: 'Desenvolvimento' }
+                                    { id: 'development', label: 'Desenvolvimento' },
+                                    { id: 'reports', label: 'Relatórios' },
                                 ].map((tab) => (
                                     <button
                                         key={tab.id}
@@ -278,10 +280,13 @@ export default function TiPage() {
                                     <h2 className="text-xl font-bold text-foreground tracking-tight">
                                         {activeTab === 'support' ? 'Fila de Suporte' :
                                             activeTab === 'infrastructure' ? 'Infraestrutura' :
-                                                activeTab === 'integration' ? 'Integração' : 'Desenvolvimento'}
+                                                activeTab === 'integration' ? 'Integração' :
+                                                    activeTab === 'reports' ? 'Relatórios e Documentos' :
+                                                        'Desenvolvimento'}
                                     </h2>
                                 </div>
 
+                                {activeTab !== 'reports' && (
                                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                                     <DialogTrigger asChild>
                                         <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm">
@@ -374,17 +379,23 @@ export default function TiPage() {
                                         </form>
                                     </FuturisticModal>
                                 </Dialog>
+                                )}
                             </div>
 
-                            {/* Loading State */}
-                            {isLoading && (
+                            {/* TI Reports Tab */}
+                            {activeTab === 'reports' && (
+                                <TiReports />
+                            )}
+
+                            {/* Loading State - only for ticket tabs */}
+                            {isLoading && activeTab !== 'reports' && (
                                 <div className="text-center py-12">
                                     <p className="text-slate-500 dark:text-muted-foreground">Carregando demandas...</p>
                                 </div>
                             )}
 
-                            {/* Content */}
-                            {!isLoading && filteredTickets.length === 0 ? (
+                            {/* Content - only for ticket tabs */}
+                            {!isLoading && activeTab !== 'reports' && filteredTickets.length === 0 ? (
                                 // Empty State Card (Glassmorphism)
                                 <div className="w-full rounded-2xl p-8 flex flex-col items-center justify-center gap-6 relative overflow-hidden group/card shadow-lg border border-border backdrop-blur-xl bg-card">
                                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
@@ -401,7 +412,7 @@ export default function TiPage() {
                                         <span className="truncate">Atualizar Status</span>
                                     </button>
                                 </div>
-                            ) : (
+                            ) : activeTab !== 'reports' && (
                                 // Ticket List (Clean Cards)
                                 <div className="space-y-4">
                                     {filteredTickets.map((ticket: any) => (

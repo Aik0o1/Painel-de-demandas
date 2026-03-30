@@ -17,8 +17,8 @@ export default function AdminPage() {
                 <div className="min-h-screen relative pb-32">
                     {/* Global Header */}
                         <div>
-                            <h1 className="text-4xl font-bold tracking-tight mb-2">Administração</h1>
-                            <p className="text-sm text-slate-500 dark:text-muted-foreground font-medium">Gestão Administrativa</p>
+                            <h1 className="text-4xl font-bold tracking-tight mb-2">Gerenciamento</h1>
+                            <p className="text-sm text-slate-500 dark:text-muted-foreground font-medium">Gerenciamento de Usuários</p>
                         </div>
 
                     {/* Custom Tabs */}
