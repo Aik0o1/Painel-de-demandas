@@ -3,9 +3,10 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
 from core.database_sql import get_db
-from core.models_sql import User, Project
+from core.models_sql import User, Project, Sector
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select, update, delete, func
 from core.security import get_current_user, check_permission
 import uuid
 
@@ -28,6 +29,7 @@ class ProjectCreate(BaseModel):
     status: str = "PLANNING"
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    assigned_to: Optional[List[str]] = None
 
 class ProjectUpdate(BaseModel):
     title: Optional[str] = None
@@ -36,6 +38,7 @@ class ProjectUpdate(BaseModel):
     status: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    assigned_to: Optional[List[str]] = None
 
 def format_project(proj: Project):
     return {
@@ -46,13 +49,36 @@ def format_project(proj: Project):
         "status": proj.status,
         "start_date": proj.startDate.isoformat() if proj.startDate else None,
         "end_date": proj.endDate.isoformat() if proj.endDate else None,
+        "assigned_to": [u.id for u in proj.assignedUsers] if hasattr(proj, 'assignedUsers') else [],
+        "assigned_users": [{"id": u.id, "name": u.name} for u in proj.assignedUsers] if hasattr(proj, 'assignedUsers') else [],
         "createdAt": proj.createdAt.isoformat() if proj.createdAt else None,
         "updatedAt": proj.updatedAt.isoformat() if proj.updatedAt else None
     }
 
+@router.get("/users", status_code=status.HTTP_200_OK)
+async def get_comunicacao_users(user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+    """Retorna os usuários que pertencem ao setor de comunicação."""
+    sector_result = await db_session.execute(select(Sector).where(Sector.slug == "comunicacao"))
+    sector = sector_result.scalar_one_or_none()
+    
+    if not sector:
+        sector_result = await db_session.execute(select(Sector).where(func.lower(Sector.name).contains("comunicação")))
+        sector = sector_result.scalar_one_or_none()
+        
+    if not sector:
+        return []
+        
+    users_result = await db_session.execute(select(User).where(User.sectorId == sector.id))
+    users = users_result.scalars().all()
+    return [{"id": u.id, "name": u.name} for u in users]
+
 @router.get("", status_code=status.HTTP_200_OK)
 async def get_projects(user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
-    result = await db_session.execute(select(Project).order_by(Project.createdAt.desc()))
+    result = await db_session.execute(
+        select(Project)
+        .options(selectinload(Project.assignedUsers))
+        .order_by(Project.createdAt.desc())
+    )
     projects = result.scalars().all()
     return [format_project(p) for p in projects]
 
@@ -70,6 +96,11 @@ async def create_project(project: ProjectCreate, user: User = Depends(check_perm
         createdAt=now,
         updatedAt=now,
     )
+    
+    if project.assigned_to:
+        users_result = await db_session.execute(select(User).where(User.id.in_(project.assigned_to)))
+        new_project.assignedUsers = users_result.scalars().all()
+        
     db_session.add(new_project)
     await db_session.commit()
     await db_session.refresh(new_project)
@@ -90,6 +121,13 @@ async def update_project(id: str, update_data: ProjectUpdate, user: User = Depen
     if "status" in data: project.status = data["status"]
     if "start_date" in data: project.startDate = parse_date(data["start_date"])
     if "end_date" in data: project.endDate = parse_date(data["end_date"])
+    
+    if "assigned_to" in data:
+        if data["assigned_to"]:
+            users_result = await db_session.execute(select(User).where(User.id.in_(data["assigned_to"])))
+            project.assignedUsers = users_result.scalars().all()
+        else:
+            project.assignedUsers = []
     
     project.updatedAt = datetime.utcnow()
     await db_session.commit()

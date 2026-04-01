@@ -56,8 +56,8 @@ export function PaymentsTable() {
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium leading-none">Contas Pagas</h3>
-                {can('financeiro', 'create') && (
-                    <Button onClick={handleCreate} className="bg-neon-cyan hover:bg-neon-cyan/80 text-black font-bold">
+                {can('financeira', 'create') && (
+                    <Button onClick={handleCreate} className="bg-neon-cyan hover:bg-neon-cyan/80 text-white font-bold">
                         <Plus className="mr-2 h-4 w-4" /> Novo Pagamento
                     </Button>
                 )}
@@ -75,7 +75,6 @@ export function PaymentsTable() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Descrição</TableHead>
-                                    <TableHead>Detalhes</TableHead>
                                     <TableHead>Fornecedor</TableHead>
                                     <TableHead>Categoria</TableHead>
                                     <TableHead>Data</TableHead>
@@ -88,22 +87,7 @@ export function PaymentsTable() {
                                 {payments.map((payment: any) => (
                                     <TableRow key={payment._id}>
                                         <TableCell className="font-medium">{payment.description}</TableCell>
-                                        <TableCell className="text-xs text-muted-foreground">
-                                            {payment.beneficiaries && payment.beneficiaries.length > 0 && (
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold text-primary">Beneficiários:</span>
-                                                    {payment.beneficiaries.map((b: string, i: number) => <span key={i}>• {b}</span>)}
-                                                </div>
-                                            )}
-                                            {payment.passenger && (
-                                                <div className="flex flex-col">
-                                                    <span className="font-semibold text-primary">Passageiro:</span>
-                                                    <span>{payment.passenger}</span>
-                                                    <span className="text-[10px]">{payment.route}</span>
-                                                </div>
-                                            )}
-                                            {!payment.beneficiaries?.length && !payment.passenger && "-"}
-                                        </TableCell>
+
                                         <TableCell>{payment.supplier}</TableCell>
                                         <TableCell>
                                             <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80">
@@ -129,7 +113,7 @@ export function PaymentsTable() {
                                         </TableCell>
                                         <TableCell>
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(payment)}>
-                                                {can('financeiro', 'update') ? <Pencil className="h-4 w-4" /> : <FileIcon className="h-4 w-4" />}
+                                                {can('financeira', 'update') ? <Pencil className="h-4 w-4" /> : <FileIcon className="h-4 w-4" />}
                                             </Button>
                                         </TableCell>
                                     </TableRow>

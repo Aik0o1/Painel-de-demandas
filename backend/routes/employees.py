@@ -54,7 +54,7 @@ async def get_employees(user: User = Depends(get_current_user), db_session: Asyn
     return [format_employee(e) for e in employees]
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_employee(emp: EmployeeCreate, user: User = Depends(check_permission("administrativo", "create")), db_session: AsyncSession = Depends(get_db)):
+async def create_employee(emp: EmployeeCreate, user: User = Depends(check_permission("administrativa", "create")), db_session: AsyncSession = Depends(get_db)):
     now = datetime.utcnow()
     new_emp = Employee(
         id=str(uuid.uuid4()),
@@ -72,7 +72,7 @@ async def create_employee(emp: EmployeeCreate, user: User = Depends(check_permis
     return format_employee(new_emp)
 
 @router.put("/{id}", status_code=status.HTTP_200_OK)
-async def update_employee(id: str, update_data: EmployeeUpdate, user: User = Depends(check_permission("administrativo", "update")), db_session: AsyncSession = Depends(get_db)):
+async def update_employee(id: str, update_data: EmployeeUpdate, user: User = Depends(check_permission("administrativa", "update")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(Employee).where(Employee.id == id))
     employee = result.scalar_one_or_none()
     
@@ -92,7 +92,7 @@ async def update_employee(id: str, update_data: EmployeeUpdate, user: User = Dep
     return format_employee(employee)
 
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
-async def delete_employee(id: str, user: User = Depends(check_permission("administrativo", "delete")), db_session: AsyncSession = Depends(get_db)):
+async def delete_employee(id: str, user: User = Depends(check_permission("administrativa", "delete")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(delete(Employee).where(Employee.id == id))
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Employee not found")

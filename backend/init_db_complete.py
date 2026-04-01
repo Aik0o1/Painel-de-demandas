@@ -42,7 +42,7 @@ async def init_db():
             setores = [
                 {"name": "TI", "slug": "ti"},
                 {"name": "Comunicação", "slug": "comunicacao"},
-                {"name": "Financeiro", "slug": "financeiro"},
+                {"name": "Financeiro", "slug": "financeira"},
                 {"name": "Administrativo", "slug": "administrativo"},
                 {"name": "Procuradoria", "slug": "procuradoria"},
                 {"name": "Registro", "slug": "registro"},

@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { StatusBadge } from './StatusBadge';
 import { PriorityBadge } from './PriorityBadge';
 import { DemandWithProfiles, DemandStatus } from '@/hooks/useDemands';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
 interface DemandTableProps {
@@ -82,7 +82,22 @@ export function DemandTable({ demands, onEdit, onDelete, onStatusChange, onView 
                   <PriorityBadge priority={demand.priority} />
                 </TableCell>
                 <TableCell>
-                  {demand.assignee ? (
+                  {demand.assigned_profiles && demand.assigned_profiles.length > 0 ? (
+                    <div className="flex -space-x-2">
+                      {demand.assigned_profiles.map((profile) => (
+                        <div key={profile.id} title={(profile.full_name || profile.email) || undefined}>
+                          <Avatar className="h-7 w-7 border-2 border-background ring-1 ring-border/50">
+                            {profile.image && (
+                              <AvatarImage src={profile.image} alt={profile.full_name || ''} />
+                            )}
+                            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                              {getInitials(profile.full_name, profile.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                      ))}
+                    </div>
+                  ) : demand.assignee ? (
                     <div className="flex items-center gap-2">
                       <Avatar className="h-7 w-7">
                         <AvatarFallback className="text-xs bg-primary/10 text-primary">

@@ -15,6 +15,7 @@ class DemandCreate(BaseModel):
     description: Optional[str] = None
     priority: str
     assigned_to: Optional[str] = None
+    assigned_user_ids: Optional[List[str]] = []
     due_date: Optional[str] = None
 
 class DemandUpdate(BaseModel):
@@ -23,6 +24,7 @@ class DemandUpdate(BaseModel):
     priority: Optional[str] = None
     status: Optional[str] = None
     assigned_to: Optional[str] = None
+    assigned_user_ids: Optional[List[str]] = None
     due_date: Optional[str] = None
     completed_at: Optional[str] = None
 
@@ -71,6 +73,18 @@ async def format_demand(demand: Demand, db_session: AsyncSession):
     
     data["creator"] = await populate_user(demand.createdBy, db_session)
     data["assignee"] = await populate_user(demand.assignedTo, db_session)
+    
+    data["assigned_profiles"] = [
+        {
+            "id": u.id,
+            "full_name": u.name,
+            "email": u.email,
+            "image": u.image
+        }
+        for u in (demand.assignedUsers or [])
+    ]
+    data["assigned_user_ids"] = [u.id for u in (demand.assignedUsers or [])]
+    data["assignedUsers"] = data["assigned_profiles"] # Legacy support
         
     return data
 
@@ -108,6 +122,10 @@ async def create_demand(demand: DemandCreate, x_user_email: Optional[str] = Head
             updatedAt=datetime.utcnow()
         )
         
+        if demand.assigned_user_ids:
+            users_res = await db_session.execute(select(User).where(User.id.in_(demand.assigned_user_ids)))
+            new_demand.assignedUsers = users_res.scalars().all()
+
         db_session.add(new_demand)
         await db_session.commit()
         await db_session.refresh(new_demand)
@@ -139,6 +157,15 @@ async def update_demand(id: str, update_data: DemandUpdate, db_session: AsyncSes
         if demand.status == "completed" and old_status != "completed":
             demand.completedAt = datetime.utcnow()
     if "assigned_to" in data: demand.assignedTo = data["assigned_to"]
+    
+    if "assigned_user_ids" in data and data["assigned_user_ids"] is not None:
+        user_ids = data["assigned_user_ids"]
+        if user_ids:
+            users_res = await db_session.execute(select(User).where(User.id.in_(user_ids)))
+            demand.assignedUsers = users_res.scalars().all()
+        else:
+            demand.assignedUsers = []
+
     if "due_date" in data:
         if data["due_date"]:
             try:

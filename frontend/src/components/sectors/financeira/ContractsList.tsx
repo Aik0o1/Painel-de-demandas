@@ -81,7 +81,7 @@ export function ContractsList() {
                     }}>
                         <FileText className="mr-2 h-4 w-4" /> Exportar
                     </Button>
-                    {can('financeiro', 'create') && (
+                    {can('financeira', 'create') && (
                         <Button onClick={() => { setSelectedContract(null); setIsDialogOpen(true); }}>
                             <Plus className="mr-2 h-4 w-4" /> Novo Contrato
                         </Button>
@@ -125,9 +125,9 @@ export function ContractsList() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => { setSelectedContract(contract); setIsDialogOpen(true); }}>
-                                            {can('financeiro', 'update') ? <Edit className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                            {can('financeira', 'update') ? <Edit className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                                         </Button>
-                                        {can('financeiro', 'delete') && (
+                                        {can('financeira', 'delete') && (
                                             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(contract.id)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

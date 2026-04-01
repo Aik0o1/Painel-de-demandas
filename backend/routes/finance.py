@@ -68,7 +68,7 @@ async def get_budget_categories(db_session: AsyncSession = Depends(get_db)):
     return formatted_categories
 
 @router.put("/budget-categories", status_code=status.HTTP_200_OK)
-async def update_budget_category(data: BudgetCategoryUpdate, user: User = Depends(check_permission("financeiro", "update")), db_session: AsyncSession = Depends(get_db)):
+async def update_budget_category(data: BudgetCategoryUpdate, user: User = Depends(check_permission("financeira", "update")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(BudgetCategory).where(BudgetCategory.id == data.id))
     category = result.scalar_one_or_none()
     
@@ -124,7 +124,7 @@ async def create_payment(
     beneficiaries: Optional[str] = Form(None),
     passenger: Optional[str] = Form(None),
     route: Optional[str] = Form(None),
-    user: User = Depends(check_permission("financeiro", "create")),
+    user: User = Depends(check_permission("financeira", "create")),
     db_session: AsyncSession = Depends(get_db)
 ):
     try:
@@ -190,7 +190,7 @@ async def update_payment(
     passenger: Optional[str] = Form(None),
     route: Optional[str] = Form(None),
     status_updated: Optional[str] = Form(None, alias="status"),
-    user: User = Depends(check_permission("financeiro", "update")),
+    user: User = Depends(check_permission("financeira", "update")),
     db_session: AsyncSession = Depends(get_db)
 ):
     result = await db_session.execute(select(FinanceTransaction).where(FinanceTransaction.id == id))

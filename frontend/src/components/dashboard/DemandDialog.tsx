@@ -30,6 +30,7 @@ export interface DemandFormData {
   priority: DemandPriority;
   status?: DemandStatus;
   assigned_to?: string;
+  assigned_user_ids: string[];
   due_date?: string;
 }
 
@@ -47,6 +48,7 @@ export function DemandDialog({
     title: '',
     description: '',
     priority: 'medium',
+    assigned_user_ids: [],
   });
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -59,6 +61,7 @@ export function DemandDialog({
         priority: demand.priority,
         status: demand.status,
         assigned_to: demand.assigned_to || undefined,
+        assigned_user_ids: demand.assigned_user_ids || demand.assigned_profiles?.map(u => u.id) || [],
       });
       setDueDate(demand.due_date ? new Date(demand.due_date) : undefined);
     } else {
@@ -66,6 +69,7 @@ export function DemandDialog({
         title: '',
         description: '',
         priority: 'medium',
+        assigned_user_ids: [],
       });
       setDueDate(undefined);
     }
@@ -138,11 +142,11 @@ export function DemandDialog({
                   <SelectTrigger className="w-full bg-gray-50 dark:bg-muted/50 border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary h-auto">
                     <SelectValue placeholder="Selecione a prioridade" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0a0b14] border border-slate-800 text-foreground">
-                    <SelectItem value="low" className="focus:bg-muted focus:text-foreground cursor-pointer">Baixa</SelectItem>
-                    <SelectItem value="medium" className="focus:bg-muted focus:text-foreground cursor-pointer">Média</SelectItem>
-                    <SelectItem value="high" className="focus:bg-muted focus:text-foreground cursor-pointer">Alta</SelectItem>
-                    <SelectItem value="critical" className="focus:bg-muted focus:text-foreground cursor-pointer">Crítica</SelectItem>
+                  <SelectContent className="bg-popover border border-border text-popover-foreground">
+                    <SelectItem value="low" className="focus:bg-accent focus:text-accent-foreground cursor-pointer">Baixa</SelectItem>
+                    <SelectItem value="medium" className="focus:bg-accent focus:text-accent-foreground cursor-pointer">Média</SelectItem>
+                    <SelectItem value="high" className="focus:bg-accent focus:text-accent-foreground cursor-pointer">Alta</SelectItem>
+                    <SelectItem value="critical" className="focus:bg-accent focus:text-accent-foreground cursor-pointer">Crítica</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -166,10 +170,10 @@ export function DemandDialog({
                     <SelectTrigger className="w-full bg-gray-50 dark:bg-muted/50 border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary h-auto">
                       <SelectValue placeholder="Selecione o status" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#0a0b14] border border-slate-800 text-foreground">
-                      <SelectItem value="pending" className="focus:bg-muted focus:text-foreground cursor-pointer">Pendente</SelectItem>
-                      <SelectItem value="in_progress" className="focus:bg-muted focus:text-foreground cursor-pointer">Em Progresso</SelectItem>
-                      <SelectItem value="completed" className="focus:bg-muted focus:text-foreground cursor-pointer">Concluído</SelectItem>
+                    <SelectContent className="bg-popover border border-border text-popover-foreground">
+                      <SelectItem value="pending" className="focus:bg-accent focus:text-accent-foreground cursor-pointer">Pendente</SelectItem>
+                      <SelectItem value="in_progress" className="focus:bg-accent focus:text-accent-foreground cursor-pointer">Em Progresso</SelectItem>
+                      <SelectItem value="completed" className="focus:bg-accent focus:text-accent-foreground cursor-pointer">Concluído</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -179,39 +183,89 @@ export function DemandDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2 group">
-              <Label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-muted-foreground mb-2 ml-1">Responsável</Label>
+              <Label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-muted-foreground mb-2 ml-1">Responsáveis</Label>
               {readOnly ? (
-                <div className="w-full bg-gray-50 dark:bg-muted/50 border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-foreground">
-                  {form.assigned_to
-                    ? profiles.find(p => p.id === form.assigned_to)?.full_name ||
-                    profiles.find(p => p.id === form.assigned_to)?.email ||
-                    'Desconhecido'
-                    : 'Não atribuído'}
+                <div className="w-full bg-gray-50 dark:bg-muted/50 border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-foreground flex flex-wrap gap-2 min-h-[46px]">
+                  {form.assigned_user_ids.length > 0 ? (
+                    form.assigned_user_ids.map(id => {
+                      const profile = profiles.find(p => p.id === id);
+                      return (
+                        <div key={id} className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-md text-xs flex items-center gap-1.5">
+                          {profile?.image ? (
+                            <img src={profile.image} alt="" className="w-4 h-4 rounded-full" />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px]">
+                              {(profile?.full_name || profile?.email || '?').charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          {profile?.full_name || profile?.email || 'Desconhecido'}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <span className="text-muted-foreground italic">Nenhum atribuído</span>
+                  )}
                 </div>
               ) : (
-                <Select
-                  value={form.assigned_to || 'unassigned'}
-                  onValueChange={(value) => setForm({
-                    ...form,
-                    assigned_to: value === 'unassigned' ? undefined : value
-                  })}
-                  disabled={isLoadingProfiles}
-                >
-                  <SelectTrigger className="w-full bg-gray-50 dark:bg-muted/50 border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary h-auto">
-                    <SelectValue placeholder="Selecione o responsável" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#0a0b14] border border-slate-800 text-foreground">
-                    <SelectItem value="unassigned" className="focus:bg-muted focus:text-foreground cursor-pointer">Não atribuído</SelectItem>
-                    {profiles.map((profile) => (
-                      <SelectItem key={profile.id} value={profile.id} className="focus:bg-muted focus:text-foreground cursor-pointer">
-                        {profile.full_name || profile.email}
-                      </SelectItem>
-                    ))}
-                    {!isLoadingProfiles && profiles.length === 0 && (
-                      <SelectItem value="no_users" disabled className="text-slate-500">Nenhum usuário encontrado</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={isLoadingProfiles}
+                      className={cn(
+                        "w-full bg-gray-50 dark:bg-muted/50 border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-3 text-sm text-left flex items-center justify-between transition-all duration-300",
+                        "focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:shadow-[0_0_15px_rgba(59,130,246,0.3)] min-h-[46px]",
+                        form.assigned_user_ids.length === 0 && "text-gray-500"
+                      )}
+                    >
+                      <span className="truncate">
+                        {form.assigned_user_ids.length > 0 
+                          ? `${form.assigned_user_ids.length} selecionado(s)` 
+                          : "Selecione os responsáveis"}
+                      </span>
+                      {isLoadingProfiles && <Loader2 className="w-4 h-4 animate-spin opacity-50" />}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2 bg-popover border-border shadow-2xl z-50">
+                    <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-1">
+                      {profiles.map((profile) => (
+                        <div 
+                          key={profile.id} 
+                          className={cn(
+                            "flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors",
+                            form.assigned_user_ids?.includes(profile.id) 
+                              ? "bg-primary/20 text-primary" 
+                              : "hover:bg-accent text-muted-foreground hover:text-accent-foreground"
+                          )}
+                          onClick={() => {
+                            const current = form.assigned_user_ids;
+                            const next = current.includes(profile.id)
+                              ? current.filter(id => id !== profile.id)
+                              : [...current, profile.id];
+                            setForm({...form, assigned_user_ids: next});
+                          }}
+                        >
+                          <div className={cn(
+                            "w-4 h-4 border rounded flex items-center justify-center transition-colors",
+                            form.assigned_user_ids.includes(profile.id) 
+                              ? "bg-primary border-primary" 
+                              : "border-slate-600"
+                          )}>
+                            {form.assigned_user_ids.includes(profile.id) && (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-white"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            )}
+                          </div>
+                          <span className="text-sm truncate">{profile.full_name || profile.email}</span>
+                        </div>
+                      ))}
+                      {profiles.length === 0 && !isLoadingProfiles && (
+                        <div className="p-4 text-center text-xs text-slate-500">
+                          Nenhum usuário encontrado
+                        </div>
+                      )}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
             </div>
 

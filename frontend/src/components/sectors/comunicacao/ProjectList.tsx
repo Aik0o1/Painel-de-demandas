@@ -137,6 +137,23 @@ export function ProjectList() {
                                         {new Date(proj.start_date).toLocaleDateString()} - {proj.end_date ? new Date(proj.end_date).toLocaleDateString() : 'Em aberto'}
                                     </div>
                                 </div>
+                                <div className="col-span-2">
+                                    <span className="text-[10px] uppercase tracking-wider text-slate-500 dark:text-muted-foreground block mb-1">Responsáveis</span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {proj.assigned_users && proj.assigned_users.length > 0 ? (
+                                            proj.assigned_users.map((u: any) => (
+                                                <div key={u.id} className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-slate-800">
+                                                    <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center text-[8px] text-white font-bold">
+                                                        {u.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <span className="text-[10px] font-medium">{u.name}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <span className="text-[10px] text-slate-400 italic">Sem responsáveis</span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                             <div className="mt-4 pt-3 border-t border-slate-200 dark:border-border/50 flex justify-end gap-2">
                                 {can('comunicacao', 'delete') && (

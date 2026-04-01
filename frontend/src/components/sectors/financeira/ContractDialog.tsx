@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
+import { maskCurrency, parseCurrency } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import {
     FuturisticModal,
@@ -17,13 +18,13 @@ interface ContractDialogProps {
 
 export function ContractDialog({ open, onOpenChange, contract, onSave }: ContractDialogProps) {
     const isEditing = !!contract;
-    const { register, handleSubmit, reset, setValue, formState: { isSubmitting } } = useForm();
+    const { register, handleSubmit, reset, setValue, control, formState: { isSubmitting } } = useForm();
 
     useEffect(() => {
         if (contract) {
             setValue("title", contract.title);
             setValue("supplier", contract.supplier);
-            setValue("value", contract.value);
+            setValue("value", maskCurrency((contract.value * 100).toString()));
 
             // Format dates for HTML5 date input (YYYY-MM-DD)
             if (contract.start_date) {
@@ -48,7 +49,12 @@ export function ContractDialog({ open, onOpenChange, contract, onSave }: Contrac
     }, [contract, setValue, reset, register]);
 
     const onSubmit = async (data: any) => {
-        await onSave({ ...contract, ...data });
+        const payload = {
+            ...contract,
+            ...data,
+            value: parseCurrency(data.value)
+        };
+        await onSave(payload);
         onOpenChange(false);
         reset();
     };
@@ -77,11 +83,18 @@ export function ContractDialog({ open, onOpenChange, contract, onSave }: Contrac
                         {...register("supplier", { required: true })}
                     />
 
-                    <FuturisticInput
-                        label="Valor Total (R$)"
-                        type="number"
-                        step="0.01"
-                        {...register("value", { required: true })}
+                    <Controller
+                        name="value"
+                        control={control}
+                        rules={{ required: true }}
+                        render={({ field }) => (
+                            <FuturisticInput
+                                label="Valor Total (R$)"
+                                placeholder="0,00"
+                                value={field.value}
+                                onChange={(e) => field.onChange(maskCurrency(e.target.value))}
+                            />
+                        )}
                     />
 
                     <div className="grid grid-cols-2 gap-4">

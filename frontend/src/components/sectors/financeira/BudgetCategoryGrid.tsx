@@ -103,7 +103,7 @@ export function BudgetCategoryGrid() {
                         <Card key={cat.id || cat._id} className="border-neon-cyan/20">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">{cat.name}</CardTitle>
-                                {can('financeiro', 'update') && (
+                                {can('financeira', 'update') && (
                                     <Button variant="ghost" size="icon" onClick={() => handleEdit(cat)}>
                                         <Edit2 className="h-4 w-4 text-muted-foreground" />
                                     </Button>

@@ -22,11 +22,13 @@ class TicketCreate(BaseModel):
     category: str
     sub_sector: str = "support"
     assigned_to_id: Optional[str] = None
+    assigned_to_ids: Optional[List[str]] = None
 
 class TicketUpdate(BaseModel):
     status: Optional[str] = None
     pause_reason: Optional[str] = None
     assigned_to_id: Optional[str] = None
+    assigned_to_ids: Optional[List[str]] = None
 
 def format_ticket(ticket: Ticket):
     return {
@@ -38,11 +40,10 @@ def format_ticket(ticket: Ticket):
         "category": ticket.category,
         "sub_sector": ticket.subSector,
         "status": ticket.status,
-        "assigned_to_id": ticket.assignedToId,
-        "assigned_to": {
-            "id": ticket.assignedTo.id,
-            "name": ticket.assignedTo.name
-        } if ticket.assignedTo else None,
+        "assigned_to_ids": [u.id for u in getattr(ticket, 'assignedUsers', [])] if getattr(ticket, 'assignedUsers', None) else ([ticket.assignedToId] if ticket.assignedToId else []),
+        "assigned_to": [{"id": u.id, "name": u.name} for u in getattr(ticket, 'assignedUsers', [])] if getattr(ticket, 'assignedUsers', None) else (
+            [{"id": ticket.assignedTo.id, "name": ticket.assignedTo.name}] if ticket.assignedTo else []
+        ),
         "accumulated_time_ms": ticket.accumulatedTimeMs,
         "last_started_at": ticket.lastStartedAt.isoformat() if ticket.lastStartedAt else None,
         "pause_reason": ticket.pauseReason,
@@ -121,12 +122,12 @@ async def get_tickets(
     current_user: User = Depends(get_current_user),
     db_session: AsyncSession = Depends(get_db)
 ):
-    query = select(Ticket).options(joinedload(Ticket.assignedTo))
+    query = select(Ticket).options(joinedload(Ticket.assignedTo), joinedload(Ticket.assignedUsers))
     if sub_sector:
         query = query.where(Ticket.subSector == sub_sector)
     
     result = await db_session.execute(query.order_by(Ticket.createdAt.desc()))
-    tickets = result.scalars().all()
+    tickets = result.scalars().unique().all()
     return [format_ticket(t) for t in tickets]
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -155,8 +156,13 @@ async def create_ticket(
     )
     
     db_session.add(new_ticket)
+    
+    if ticket.assigned_to_ids:
+        users_result = await db_session.execute(select(User).where(User.id.in_(ticket.assigned_to_ids)))
+        new_ticket.assignedUsers = list(users_result.scalars().all())
+        
     await db_session.commit()
-    await db_session.refresh(new_ticket)
+    await db_session.refresh(new_ticket, ['assignedTo', 'assignedUsers'])
     return format_ticket(new_ticket)
 
 @router.patch("/{id}", status_code=status.HTTP_200_OK)
@@ -167,9 +173,9 @@ async def update_ticket(
     db_session: AsyncSession = Depends(get_db)
 ):
     result = await db_session.execute(
-        select(Ticket).options(joinedload(Ticket.assignedTo)).where(Ticket.id == id)
+        select(Ticket).options(joinedload(Ticket.assignedTo), joinedload(Ticket.assignedUsers)).where(Ticket.id == id)
     )
-    ticket = result.scalar_one_or_none()
+    ticket = result.unique().scalar_one_or_none()
     
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -204,15 +210,23 @@ async def update_ticket(
             ticket.resolvedAt = now
 
     # Atualiza Responsável
-    if update_data.assigned_to_id is not None:
+    if update_data.assigned_to_ids is not None:
+        users_result = await db_session.execute(select(User).where(User.id.in_(update_data.assigned_to_ids)))
+        ticket.assignedUsers = list(users_result.scalars().all())
+    elif update_data.assigned_to_id is not None:
         # Se for string vazia ou "unassigned", remove o responsável
         if update_data.assigned_to_id == "" or update_data.assigned_to_id == "unassigned":
             ticket.assignedToId = None
+            ticket.assignedUsers = []
         else:
             ticket.assignedToId = update_data.assigned_to_id
+            user_result = await db_session.execute(select(User).where(User.id == update_data.assigned_to_id))
+            user = user_result.scalar_one_or_none()
+            if user:
+                ticket.assignedUsers = [user]
 
     ticket.updatedAt = now
     
     await db_session.commit()
-    await db_session.refresh(ticket)
+    await db_session.refresh(ticket, ['assignedTo', 'assignedUsers'])
     return format_ticket(ticket)

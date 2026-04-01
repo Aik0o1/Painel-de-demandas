@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional, List
-from sqlalchemy import String, DateTime, Boolean, ForeignKey, JSON, Enum as SQLEnum, Float, Integer, Text
+from sqlalchemy import String, DateTime, Boolean, ForeignKey, JSON, Enum as SQLEnum, Float, Integer, Text, Table, Column
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -101,6 +101,13 @@ class AuditLog(Base):
 
     user = relationship("User", back_populates="auditLogs")
 
+demand_assignees = Table(
+    'demand_assignees',
+    Base.metadata,
+    Column('demand_id', String(36), ForeignKey('demands.id', ondelete='CASCADE'), primary_key=True),
+    Column('user_id', String(36), ForeignKey('User.id', ondelete='CASCADE'), primary_key=True)
+)
+
 class Demand(Base):
     __tablename__ = "demands"
 
@@ -116,6 +123,16 @@ class Demand(Base):
     
     createdAt: Mapped[datetime] = mapped_column("createdAt", DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column("updatedAt", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    assignedUsers = relationship("User", secondary=demand_assignees, lazy="selectin")
+
+ticket_assignees = Table(
+    'ticket_assignees',
+    Base.metadata,
+    Column('ticket_id', String(36), ForeignKey('tickets.id', ondelete='CASCADE'), primary_key=True),
+    Column('user_id', String(36), ForeignKey('User.id', ondelete='CASCADE'), primary_key=True)
+)
 
 class Ticket(Base):
     __tablename__ = "tickets"
@@ -139,6 +156,7 @@ class Ticket(Base):
 
     # Relationships
     assignedTo = relationship("User", foreign_keys=[assignedToId])
+    assignedUsers = relationship("User", secondary=ticket_assignees, lazy="selectin")
 
 class InventoryItem(Base):
     __tablename__ = "inventory_items"
@@ -209,6 +227,7 @@ class Contract(Base):
     title: Mapped[str] = mapped_column(String(255))
     supplier: Mapped[str] = mapped_column(String(255))
     value: Mapped[float] = mapped_column(Float)
+    startDate: Mapped[Optional[datetime]] = mapped_column("startDate", DateTime, nullable=True)
     endDate: Mapped[Optional[datetime]] = mapped_column("endDate", DateTime, nullable=True)
     sectorId: Mapped[Optional[str]] = mapped_column("sectorId", String(36), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="ACTIVE")
@@ -226,6 +245,13 @@ class Employee(Base):
     createdAt: Mapped[datetime] = mapped_column("createdAt", DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column("updatedAt", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+project_assignees = Table(
+    'project_assignees',
+    Base.metadata,
+    Column('project_id', String(36), ForeignKey('projects.id', ondelete='CASCADE'), primary_key=True),
+    Column('user_id', String(36), ForeignKey('User.id', ondelete='CASCADE'), primary_key=True)
+)
+
 class Project(Base):
     __tablename__ = "projects"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -237,6 +263,9 @@ class Project(Base):
     endDate: Mapped[Optional[datetime]] = mapped_column("endDate", DateTime, nullable=True)
     createdAt: Mapped[datetime] = mapped_column("createdAt", DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column("updatedAt", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    assignedUsers = relationship("User", secondary=project_assignees, lazy="selectin")
 
 class RegistryEntry(Base):
     __tablename__ = "registry_entries"

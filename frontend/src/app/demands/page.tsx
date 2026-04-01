@@ -238,10 +238,10 @@ export default function DemandsPage() {
 
                                 <div className="flex items-center justify-between border-t border-white/5 pt-3 mt-1 pl-2">
                                     <div className="flex -space-x-2">
-                                        {[demand.creator, demand.assignee].filter(Boolean).map((p: any, i) => (
-                                            <Avatar key={i} className="w-7 h-7 border-2 border-[#1e293b] ring-2 ring-transparent group-hover:ring-blue-500/20 transition-all">
+                                        {[demand.creator, ...(demand.assigned_profiles || [])].filter((p, i, self) => p && self.findIndex(t => t?.id === p.id) === i).map((p: any, i) => (
+                                            <Avatar key={i} className="w-7 h-7 border-2 border-background ring-2 ring-transparent group-hover:ring-primary/20 transition-all">
                                                 <AvatarImage src={p.image} />
-                                                <AvatarFallback className="bg-muted text-xs text-white">{p.full_name?.[0]}</AvatarFallback>
+                                                <AvatarFallback className="bg-muted text-[10px]">{p.full_name?.[0] || '?'}</AvatarFallback>
                                             </Avatar>
                                         ))}
                                     </div>

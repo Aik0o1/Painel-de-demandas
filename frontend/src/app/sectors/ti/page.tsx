@@ -164,16 +164,38 @@ export default function TiPage() {
     });
 
     const assignMutation = useMutation({
-        mutationFn: async ({ id, userId }: { id: string, userId: string }) => {
-            return apiPatch(`/tickets/${id}`, { assigned_to_id: userId });
+        mutationFn: async ({ id, userIds, usersData }: { id: string, userIds: string[], usersData?: {id: string, name: string}[] }) => {
+            return apiPatch(`/tickets/${id}`, { assigned_to_ids: userIds });
+        },
+        onMutate: async (variables) => {
+            await queryClient.cancelQueries({ queryKey: ['tickets'] });
+            const previousTickets = queryClient.getQueryData(['tickets']);
+            
+            if (variables.usersData) {
+                queryClient.setQueryData(['tickets'], (old: any) => {
+                    if (!old) return old;
+                    return old.map((t: any) => {
+                        if (t.id === variables.id) {
+                            return { ...t, assigned_to: variables.usersData };
+                        }
+                        return t;
+                    });
+                });
+            }
+            return { previousTickets };
+        },
+        onError: (err, variables, context: any) => {
+            if (context?.previousTickets) {
+                queryClient.setQueryData(['tickets'], context.previousTickets);
+            }
+            toast.error("Erro ao atribuir responsável.");
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tickets'] });
             setIsEditDialogOpen(false);
             setSelectedTicket(null);
             toast.success("Responsável atribuído com sucesso!");
-        },
-        onError: () => toast.error("Erro ao atribuir responsável.")
+        }
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -191,14 +213,35 @@ export default function TiPage() {
         mutationFn: async ({ id, status, reason }: { id: string, status: string, reason?: string }) => {
             return apiPatch(`/tickets/${id}`, { status, pause_reason: reason });
         },
+        onMutate: async (variables) => {
+            await queryClient.cancelQueries({ queryKey: ['tickets'] });
+            const previousTickets = queryClient.getQueryData(['tickets']);
+            
+            queryClient.setQueryData(['tickets'], (old: any) => {
+                if (!old) return old;
+                return old.map((t: any) => {
+                    if (t.id === variables.id) {
+                        return { ...t, status: variables.status, pause_reason: variables.reason || null };
+                    }
+                    return t;
+                });
+            });
+            
+            return { previousTickets };
+        },
+        onError: (err, variables, context: any) => {
+            if (context?.previousTickets) {
+                queryClient.setQueryData(['tickets'], context.previousTickets);
+            }
+            toast.error("Erro ao atualizar status.");
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tickets'] });
             toast.success("Status atualizado!");
             setIsPauseDialogOpen(false);
             setPauseReason("");
             setPauseTicketId(null);
-        },
-        onError: () => toast.error("Erro ao atualizar status.")
+        }
     });
 
     const handleAction = (id: string, action: string) => {
@@ -455,7 +498,9 @@ export default function TiPage() {
                                                         {ticket.assigned_to && (
                                                             <span className="flex items-center text-primary font-medium">
                                                                 <UserIcon className="w-3 h-3 mr-1" />
-                                                                {ticket.assigned_to.name}
+                                                                {Array.isArray(ticket.assigned_to) 
+                                                                    ? ticket.assigned_to.map((u: any) => u.name).join(', ') 
+                                                                    : ticket.assigned_to.name}
                                                             </span>
                                                         )}
                                                         {ticket.accumulated_time_ms > 0 && (
@@ -543,9 +588,9 @@ export default function TiPage() {
                                 setSelectedTicket(null);
                             }}
                             ticket={selectedTicket}
-                            onAssign={async (userId) => {
+                            onAssign={async (userIds) => {
                                 if (selectedTicket) {
-                                    await assignMutation.mutateAsync({ id: selectedTicket.id, userId });
+                                    await assignMutation.mutateAsync({ id: selectedTicket.id, userIds });
                                 }
                             }}
                         />

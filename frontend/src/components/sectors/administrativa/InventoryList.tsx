@@ -86,7 +86,7 @@ export function InventoryList() {
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h3 className="text-xl font-semibold">Inventário Patrimonial</h3>
-                {can('administrativo', 'create') && (
+                {can('administrativa', 'create') && (
                     <Button onClick={() => { setSelectedItem(null); setIsDialogOpen(true); }}>
                         <Plus className="mr-2 h-4 w-4" /> Novo Item
                     </Button>
@@ -129,9 +129,9 @@ export function InventoryList() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => { setSelectedItem(item); setIsDialogOpen(true); }}>
-                                            {can('administrativo', 'update') ? <Edit className="h-4 w-4" /> : <Box className="h-4 w-4" />}
+                                            {can('administrativa', 'update') ? <Edit className="h-4 w-4" /> : <Box className="h-4 w-4" />}
                                         </Button>
-                                        {can('administrativo', 'delete') && (
+                                        {can('administrativa', 'delete') && (
                                             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(item.id)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

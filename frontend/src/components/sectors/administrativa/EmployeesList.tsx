@@ -86,7 +86,7 @@ export function EmployeesList() {
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h3 className="text-xl font-semibold">Quadro de Pessoal (RH)</h3>
-                {can('administrativo', 'create') && (
+                {can('administrativa', 'create') && (
                     <Button onClick={() => { setSelectedEmployee(null); setIsDialogOpen(true); }}>
                         <Plus className="mr-2 h-4 w-4" /> Novo Servidor
                     </Button>
@@ -129,9 +129,9 @@ export function EmployeesList() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => { setSelectedEmployee(emp); setIsDialogOpen(true); }}>
-                                            {can('administrativo', 'update') ? <Edit className="h-4 w-4" /> : <UserCircle className="h-4 w-4" />}
+                                            {can('administrativa', 'update') ? <Edit className="h-4 w-4" /> : <UserCircle className="h-4 w-4" />}
                                         </Button>
-                                        {can('administrativo', 'delete') && (
+                                        {can('administrativa', 'delete') && (
                                             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(emp.id)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

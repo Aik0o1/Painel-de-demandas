@@ -44,7 +44,7 @@ async def get_inventory(user: User = Depends(get_current_user), db_session: Asyn
     return [format_item(i) for i in items]
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_inventory(item: InventoryCreate, user: User = Depends(check_permission("administrativo", "create")), db_session: AsyncSession = Depends(get_db)):
+async def create_inventory(item: InventoryCreate, user: User = Depends(check_permission("administrativa", "create")), db_session: AsyncSession = Depends(get_db)):
     now = datetime.utcnow()
     new_item = InventoryItem(
         id=str(uuid.uuid4()),
@@ -67,7 +67,7 @@ async def create_inventory(item: InventoryCreate, user: User = Depends(check_per
         raise HTTPException(status_code=400, detail=f"Erro ao criar item (código duplicado?): {str(e)}")
 
 @router.put("/{id}", status_code=status.HTTP_200_OK)
-async def update_inventory(id: str, update_data: InventoryUpdate, user: User = Depends(check_permission("administrativo", "update")), db_session: AsyncSession = Depends(get_db)):
+async def update_inventory(id: str, update_data: InventoryUpdate, user: User = Depends(check_permission("administrativa", "update")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(InventoryItem).where(InventoryItem.id == id))
     item = result.scalar_one_or_none()
     
@@ -88,7 +88,7 @@ async def update_inventory(id: str, update_data: InventoryUpdate, user: User = D
     return format_item(item)
 
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
-async def delete_inventory(id: str, user: User = Depends(check_permission("administrativo", "delete")), db_session: AsyncSession = Depends(get_db)):
+async def delete_inventory(id: str, user: User = Depends(check_permission("administrativa", "delete")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(delete(InventoryItem).where(InventoryItem.id == id))
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Item not found")

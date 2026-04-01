@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { maskCurrency, parseCurrency } from "@/lib/utils";
 
 import { apiGet, apiPost, apiPut } from "@/services/api";
 
@@ -44,9 +45,9 @@ export function PaymentDialog({ open, onOpenChange, payment }: PaymentDialogProp
     useEffect(() => {
         if (open) {
             if (payment) {
-                setDescription(payment.description);
-                setAmount(payment.amount.toString());
-                setSupplier(payment.supplier);
+                setDescription(payment.description || "");
+                setAmount(maskCurrency((payment.amount * 100).toString()));
+                setSupplier(payment.supplier || "");
                 // Fix: Ensure date is properly formatted for HTML input (YYYY-MM-DD)
                 if (payment.date) {
                     const d = new Date(payment.date);
@@ -154,7 +155,7 @@ export function PaymentDialog({ open, onOpenChange, payment }: PaymentDialogProp
 
         const formData = new FormData();
         formData.append("description", description);
-        formData.append("amount", amount);
+        formData.append("amount", parseCurrency(amount).toString());
         formData.append("supplier", supplier);
         formData.append("date", date);
         formData.append("category_id", categoryId);
@@ -254,12 +255,10 @@ export function PaymentDialog({ open, onOpenChange, payment }: PaymentDialogProp
                             <Label htmlFor="amount">Valor (R$)</Label>
                             <Input
                                 id="amount"
-                                type="number"
-                                step="0.01"
                                 required
                                 value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                placeholder="0.00"
+                                onChange={(e) => setAmount(maskCurrency(e.target.value))}
+                                placeholder="0,00"
                             />
                         </div>
                         <div className="space-y-2">

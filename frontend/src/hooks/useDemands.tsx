@@ -14,6 +14,7 @@ export interface Demand {
   status: DemandStatus;
   created_by: string;
   assigned_to: string | null;
+  assigned_user_ids: string[];
   due_date: string | null;
   completed_at: string | null;
   created_at: string;
@@ -21,8 +22,9 @@ export interface Demand {
 }
 
 export interface DemandWithProfiles extends Demand {
-  creator?: { full_name: string | null; email: string | null; image?: string | null };
-  assignee?: { full_name: string | null; email: string | null; image?: string | null };
+  creator?: { id: string; full_name: string | null; email: string | null; image?: string | null };
+  assignee?: { id: string; full_name: string | null; email: string | null; image?: string | null };
+  assigned_profiles?: Array<{ id: string; full_name: string | null; email: string | null; image?: string | null }>;
 }
 
 interface CreateDemandInput {
@@ -30,6 +32,7 @@ interface CreateDemandInput {
   description?: string;
   priority: DemandPriority;
   assigned_to?: string;
+  assigned_user_ids?: string[];
   due_date?: string;
 }
 
@@ -40,6 +43,7 @@ interface UpdateDemandInput {
   priority?: DemandPriority;
   status?: DemandStatus;
   assigned_to?: string | null;
+  assigned_user_ids?: string[];
   due_date?: string | null;
   completed_at?: string | null;
 }
