@@ -40,7 +40,6 @@ const navItems = [
   { title: 'Administrativo', url: '/sectors/administrativa', icon: Briefcase },
   { title: 'Procuradoria', url: '/sectors/procuradoria', icon: Scale },
   { title: 'Registro', url: '/sectors/registro', icon: FolderArchive },
-  { title: 'Presidência', url: '/sectors/presidencia', icon: Landmark },
   { title: 'TI', url: '/sectors/ti', icon: Cpu },
   { title: 'Relatórios', url: '/reports', icon: FileText },
   { title: 'Gerenciamento', url: '/admin', icon: ShieldCheck },
@@ -84,8 +83,8 @@ export function SidebarContent({ className, onItemClick }: SidebarContentProps) 
       const sector = sectors.find((s: any) => s.slug === targetSlug);
 
       // Match by fixed sector assignment (ID, Slug or Name for robustness)
-      const isAssigned = 
-        (sector && (profile.sector_id === sector.id || profile.sector_id === sector.slug || profile.sector_id === sector.name)) || 
+      const isAssigned =
+        (sector && (profile.sector_id === sector.id || profile.sector_id === sector.slug || profile.sector_id === sector.name)) ||
         profile.sector_id === targetSlug;
 
       // Match by granular permission (using targetSlug as key)
@@ -185,8 +184,8 @@ export function SidebarContent({ className, onItemClick }: SidebarContentProps) 
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate">
-              {profile?.full_name 
-                ? profile.full_name.split(' ').slice(0, 2).join(' ') 
+              {profile?.full_name
+                ? profile.full_name.split(' ').slice(0, 2).join(' ')
                 : 'Usuário'}
             </p>
           </div>
