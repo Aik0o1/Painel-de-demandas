@@ -87,9 +87,9 @@ export function DemandTable({ demands, onEdit, onDelete, onStatusChange, onView 
                       {demand.assigned_profiles.map((profile) => (
                         <div key={profile.id} title={(profile.full_name || profile.email) || undefined}>
                           <Avatar className="h-7 w-7 border-2 border-background ring-1 ring-border/50">
-                            {profile.image && (
+                            {profile.image && profile.image !== "" ? (
                               <AvatarImage src={profile.image} alt={profile.full_name || ''} />
-                            )}
+                            ) : null}
                             <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
                               {getInitials(profile.full_name, profile.email)}
                             </AvatarFallback>

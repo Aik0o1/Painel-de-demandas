@@ -173,7 +173,7 @@ export function SidebarContent({ className, onItemClick }: SidebarContentProps) 
           <div className="relative">
             <div className="w-10 h-10 rounded-full p-0.5 bg-white/20">
               <Avatar className="w-full h-full border-2 border-primary">
-                <AvatarImage src={profile?.image || ''} className="object-cover rounded-full" />
+                <AvatarImage src={(profile?.image && profile.image !== "") ? profile.image : undefined} className="object-cover rounded-full" />
                 <AvatarFallback className="bg-primary text-white text-xs">
                   {getInitials()}
                 </AvatarFallback>
@@ -183,10 +183,9 @@ export function SidebarContent({ className, onItemClick }: SidebarContentProps) 
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate">
-              {profile?.full_name || 'Usuário'}
-            </p>
-            <p className="text-xs text-white opacity-70 truncate font-mono">
-              {profile?.email || user?.email}
+              {profile?.full_name 
+                ? profile.full_name.split(' ').slice(0, 2).join(' ') 
+                : 'Usuário'}
             </p>
           </div>
         </button>

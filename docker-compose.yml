@@ -30,6 +30,8 @@ services:
       - DATABASE_URL=postgresql://postgres:password@db:5432/demand_navigator
     ports:
       - "8001:8001"
+    volumes:
+      - ./backend/uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy

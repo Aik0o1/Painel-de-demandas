@@ -27,7 +27,6 @@ export function useProfiles() {
     queryKey: ['profiles'],
     queryFn: async () => {
       const data = await apiGet('/profiles');
-      console.log('API /profiles raw data:', data);
       return data;
     },
     enabled: !!user,
