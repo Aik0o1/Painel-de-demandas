@@ -14,19 +14,39 @@ db_url = os.getenv(
 engine = create_engine(db_url)
 
 SLUG_MAP = {
+    # TI
     "Tecnologia da Informação": "ti",
     "Tecnologia da Informacao": "ti",
     "TI": "ti",
+    
+    # FINANCEIRA
     "Diretoria Financeira": "financeira",
+    "Financeiro": "financeira",
     "Financeira": "financeira",
+    
+    # ADMINISTRATIVA
     "Diretoria Administrativa": "administrativa",
+    "Administrativo": "administrativa",
     "Administrativa": "administrativa",
+    
+    # REGISTRO
     "Diretoria de Registro": "registro",
     "Registro": "registro",
+    "Setor de Registro": "registro",
+    
+    # COMUNICACAO
     "Setor de Comunicação": "comunicacao",
     "Comunicação": "comunicacao",
     "Comunicacao": "comunicacao",
+    "Comunicacao Social": "comunicacao",
+    
+    # PROCURADORIA
     "Procuradoria": "procuradoria",
+    "Procuradoria Juridica": "procuradoria",
+    
+    # PRESIDENCIA
+    "Presidência": "presidencia",
+    "Presidencia": "presidencia",
 }
 
 with engine.connect() as conn:

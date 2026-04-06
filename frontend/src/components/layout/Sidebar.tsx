@@ -16,7 +16,9 @@ import {
   Scale,
   FolderArchive,
   Cpu,
-  FileStack
+  FileStack,
+  Briefcase,
+  Landmark
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/layout/NotificationCenter';
 import { NavLink } from '@/components/NavLink';
@@ -34,9 +36,11 @@ const navItems = [
   { title: 'Painel', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Demandas', url: '/demands', icon: ListTodo },
   { title: 'Comunicação', url: '/sectors/comunicacao', icon: MessageSquare },
-  { title: 'Financeira', url: '/sectors/financeira', icon: Banknote },
+  { title: 'Financeiro', url: '/sectors/financeira', icon: Banknote },
+  { title: 'Administrativo', url: '/sectors/administrativa', icon: Briefcase },
   { title: 'Procuradoria', url: '/sectors/procuradoria', icon: Scale },
   { title: 'Registro', url: '/sectors/registro', icon: FolderArchive },
+  { title: 'Presidência', url: '/sectors/presidencia', icon: Landmark },
   { title: 'TI', url: '/sectors/ti', icon: Cpu },
   { title: 'Relatórios', url: '/reports', icon: FileText },
   { title: 'Gerenciamento', url: '/admin', icon: ShieldCheck },
@@ -68,9 +72,9 @@ export function SidebarContent({ className, onItemClick }: SidebarContentProps) 
     // Master Admin sees everything
     if (profile.role === 'MASTER_ADMIN') return true;
 
-    // Non-admins do not see "Administração" (can be customized)
+    // Admin management visibility
     if (item.url === '/admin') {
-      const perms = profile.permissions?.admin || profile.permissions?.admin;
+      const perms = profile.permissions?.admin;
       return !!perms?.read;
     }
 
@@ -79,22 +83,20 @@ export function SidebarContent({ className, onItemClick }: SidebarContentProps) 
       const targetSlug = item.url.split('/').pop();
       const sector = sectors.find((s: any) => s.slug === targetSlug);
 
-      // Match by fixed sector assignment (ID or Slug)
-      const isAssigned = profile.sector_id === sector?.id || profile.sector_id === targetSlug;
+      // Match by fixed sector assignment (ID, Slug or Name for robustness)
+      const isAssigned = 
+        (sector && (profile.sector_id === sector.id || profile.sector_id === sector.slug || profile.sector_id === sector.name)) || 
+        profile.sector_id === targetSlug;
 
-      // Match by granular permission
+      // Match by granular permission (using targetSlug as key)
       const hasReadPerm = profile.permissions?.[targetSlug as string]?.read;
 
       return isAssigned || !!hasReadPerm;
     }
 
-    // For other routes (Reports, etc), use specific permissions if they exist
+    // Reports - check specifically for 'relatorios' module in permissions
     if (item.url === '/reports') {
       return !!profile.permissions?.relatorios?.read;
-    }
-
-    if (item.url === '/ti/reports') {
-      return profile.sector_id === 'ti' || !!profile.permissions?.ti?.read;
     }
 
     // "Painel" and "Demandas" are visible to all authenticated users

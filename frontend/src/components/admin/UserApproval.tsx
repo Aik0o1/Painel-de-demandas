@@ -16,6 +16,8 @@ import {
     FolderArchive,
     FileText,
     Cpu,
+    Briefcase,
+    Landmark,
     Save,
     X,
     Check
@@ -57,9 +59,11 @@ const MODULES = [
     { key: 'admin', label: 'Admin', icon: ShieldCheck },
     { key: 'analytics', label: 'Análises', icon: BarChart3 },
     { key: 'comunicacao', label: 'Comunicação', icon: MessageSquare },
-    { key: 'financeira', label: 'Financeira', icon: Banknote },
+    { key: 'financeira', label: 'Financeiro', icon: Banknote },
+    { key: 'administrativa', label: 'Administrativo', icon: Briefcase },
     { key: 'procuradoria', label: 'Procuradoria', icon: Scale },
     { key: 'registro', label: 'Registro', icon: FolderArchive },
+    { key: 'presidencia', label: 'Presidência', icon: Landmark },
     { key: 'relatorios', label: 'Relatórios', icon: FileText },
     { key: 'ti', label: 'TI', icon: Cpu }
 ];
