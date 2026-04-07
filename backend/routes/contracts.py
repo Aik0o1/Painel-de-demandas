@@ -25,6 +25,7 @@ class ContractCreate(BaseModel):
     title: str
     supplier: str
     value: float
+    contract_number: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     sector_id: Optional[str] = None
@@ -34,6 +35,7 @@ class ContractUpdate(BaseModel):
     title: Optional[str] = None
     supplier: Optional[str] = None
     value: Optional[float] = None
+    contract_number: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     sector_id: Optional[str] = None
@@ -45,6 +47,7 @@ def format_contract(contract: Contract):
         "title": contract.title,
         "supplier": contract.supplier,
         "value": contract.value,
+        "contract_number": contract.contractNumber,
         "start_date": contract.startDate.isoformat() if contract.startDate else None,
         "end_date": contract.endDate.isoformat() if contract.endDate else None,
         "sector_id": contract.sectorId,
@@ -67,6 +70,7 @@ async def create_contract(contract: ContractCreate, user: User = Depends(check_p
         title=contract.title,
         supplier=contract.supplier,
         value=contract.value,
+        contractNumber=contract.contract_number,
         startDate=parse_date(contract.start_date),
         endDate=parse_date(contract.end_date),
         sectorId=contract.sector_id,
@@ -91,6 +95,7 @@ async def update_contract(id: str, update_data: ContractUpdate, user: User = Dep
     if "title" in data: contract.title = data["title"]
     if "supplier" in data: contract.supplier = data["supplier"]
     if "value" in data: contract.value = data["value"]
+    if "contract_number" in data: contract.contractNumber = data["contract_number"]
     if "start_date" in data: contract.startDate = parse_date(data["start_date"])
     if "end_date" in data: contract.endDate = parse_date(data["end_date"])
     if "sector_id" in data: contract.sectorId = data["sector_id"]

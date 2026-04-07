@@ -230,6 +230,7 @@ class Contract(Base):
     startDate: Mapped[Optional[datetime]] = mapped_column("startDate", DateTime, nullable=True)
     endDate: Mapped[Optional[datetime]] = mapped_column("endDate", DateTime, nullable=True)
     sectorId: Mapped[Optional[str]] = mapped_column("sectorId", String(36), nullable=True)
+    contractNumber: Mapped[Optional[str]] = mapped_column("contractNumber", String(50), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="ACTIVE")
     createdAt: Mapped[datetime] = mapped_column("createdAt", DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column("updatedAt", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
