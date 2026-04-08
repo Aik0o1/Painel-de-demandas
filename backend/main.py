@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routes import auth, tickets, weekly_demands, projects, employees, inventory, finance, contracts, processes, registry, couchdb_registro, profiles, demands, sectors, admin, audit_logs, reports, it_reports, users
+from routes import auth, tickets, weekly_demands, projects, employees, inventory, finance, contracts, processes, registry, couchdb_registro, profiles, demands, sectors, admin, audit_logs, reports, it_reports, users, dashboard
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -53,6 +53,7 @@ app.include_router(profiles.router, prefix="/api/profile", tags=["Perfis"])
 app.include_router(profiles.router, prefix="/api/profiles", tags=["Perfis"]) # Suporte a plural
 app.include_router(sectors.router, prefix="/api/sectors", tags=["Setores"]) # Novo
 app.include_router(demands.router, prefix="/api/demands", tags=["Menu - Demandas Globais"])
+app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Painel - Métricas"])
 app.include_router(tickets.router, prefix="/api/tickets", tags=["TI - Demandas"])
 app.include_router(weekly_demands.router, prefix="/api/weekly-demands", tags=["Comunicação - Demandas Semanais"])
 app.include_router(projects.router, prefix="/api/projects", tags=["Comunicação - Projetos"])
