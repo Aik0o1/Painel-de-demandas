@@ -1,5 +1,8 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import os
+import shutil
 from typing import Optional, List
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +13,9 @@ from core.security import get_current_user, check_permission
 import uuid
 
 router = APIRouter()
+
+UPLOAD_DIR = "uploads/contracts"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 def parse_date(v: Optional[str]) -> Optional[datetime]:
     if not v:
@@ -52,6 +58,7 @@ def format_contract(contract: Contract):
         "end_date": contract.endDate.isoformat() if contract.endDate else None,
         "sector_id": contract.sectorId,
         "status": contract.status,
+        "attachment_url": contract.attachmentUrl,
         "createdAt": contract.createdAt.isoformat() if contract.createdAt else None,
         "updatedAt": contract.updatedAt.isoformat() if contract.updatedAt else None
     }
@@ -108,8 +115,39 @@ async def update_contract(id: str, update_data: ContractUpdate, user: User = Dep
 
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
 async def delete_contract(id: str, user: User = Depends(check_permission("financeira", "delete")), db_session: AsyncSession = Depends(get_db)):
-    result = await db_session.execute(delete(Contract).where(Contract.id == id))
-    if result.rowcount == 0:
+    result = await db_session.execute(select(Contract).where(Contract.id == id))
+    contract = result.scalar_one_or_none()
+    if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
+        
+    await db_session.execute(delete(Contract).where(Contract.id == id))
     await db_session.commit()
     return {"message": "Contract deleted"}
+
+@router.post("/{id}/attachment", status_code=status.HTTP_200_OK)
+async def upload_attachment(
+    id: str,
+    file: UploadFile = File(...),
+    user: User = Depends(check_permission("financeira", "update")),
+    db_session: AsyncSession = Depends(get_db)
+):
+    result = await db_session.execute(select(Contract).where(Contract.id == id))
+    contract = result.scalar_one_or_none()
+    
+    if not contract:
+        raise HTTPException(status_code=404, detail="Contract not found")
+        
+    extension = os.path.splitext(file.filename or "")[1]
+    stored_name = f"{id}{extension}"
+    stored_path = os.path.join(UPLOAD_DIR, stored_name)
+    
+    with open(stored_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    contract.attachmentUrl = f"/api/uploads/contracts/{stored_name}"
+    contract.updatedAt = datetime.utcnow()
+    await db_session.commit()
+    await db_session.refresh(contract)
+    
+    return format_contract(contract)
+

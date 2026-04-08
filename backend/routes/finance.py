@@ -84,15 +84,23 @@ async def update_budget_category(data: BudgetCategoryUpdate, user: User = Depend
 
 # --- Payments Routes ---
 @router.get("/payments", status_code=status.HTTP_200_OK)
-async def get_payments(page: int = 1, limit: int = 10, db_session: AsyncSession = Depends(get_db)):
+async def get_payments(page: int = 1, limit: int = 10, status_filter: Optional[str] = Query(None, alias="status"), db_session: AsyncSession = Depends(get_db)):
     skip = (page - 1) * limit
     
+    query = select(FinanceTransaction)
+    if status_filter and hasattr(FinanceTransaction, 'status'):
+        query = query.where(FinanceTransaction.status == status_filter)
+
     result = await db_session.execute(
-        select(FinanceTransaction).order_by(FinanceTransaction.date.desc()).offset(skip).limit(limit)
+        query.order_by(FinanceTransaction.date.desc()).offset(skip).limit(limit)
     )
     transactions = result.scalars().all()
     
-    count_result = await db_session.execute(select(func.count(FinanceTransaction.id)))
+    count_query = select(func.count(FinanceTransaction.id))
+    if status_filter and hasattr(FinanceTransaction, 'status'):
+        count_query = count_query.where(FinanceTransaction.status == status_filter)
+        
+    count_result = await db_session.execute(count_query)
     total = count_result.scalar() or 0
     
     data = []

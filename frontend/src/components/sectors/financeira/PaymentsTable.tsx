@@ -25,12 +25,17 @@ export function PaymentsTable() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState<any>(null);
     const [page, setPage] = useState(1);
+    const [statusFilter, setStatusFilter] = useState<'all' | 'emitido' | 'não_emitido'>('all');
     const pageSize = 10;
 
     const { data, isLoading } = useQuery({
-        queryKey: ['payments', page],
+        queryKey: ['payments', page, statusFilter],
         queryFn: async () => {
-            return apiGet(`/finance/payments?page=${page}&limit=${pageSize}`);
+            let url = `/finance/payments?page=${page}&limit=${pageSize}`;
+            if (statusFilter !== 'all') {
+                url += `&status=${statusFilter}`;
+            }
+            return apiGet(url);
         },
         placeholderData: (previousData) => previousData
     });
@@ -56,11 +61,34 @@ export function PaymentsTable() {
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium leading-none">Contas Pagas</h3>
-                {can('financeira', 'create') && (
-                    <Button onClick={handleCreate} className="bg-neon-cyan hover:bg-neon-cyan/80 text-white font-bold">
-                        <Plus className="mr-2 h-4 w-4" /> Novo Pagamento
+                <div className="flex items-center gap-2">
+                    <Button 
+                        variant={statusFilter === 'all' ? 'default' : 'outline'} 
+                        onClick={() => setStatusFilter('all')}
+                        size="sm"
+                    >
+                        Todos
                     </Button>
-                )}
+                    <Button 
+                        variant={statusFilter === 'emitido' ? 'default' : 'outline'} 
+                        onClick={() => setStatusFilter('emitido')}
+                        size="sm"
+                    >
+                        Emitido
+                    </Button>
+                    <Button 
+                        variant={statusFilter === 'não_emitido' ? 'default' : 'outline'} 
+                        onClick={() => setStatusFilter('não_emitido')}
+                        size="sm"
+                    >
+                        Não Emitido
+                    </Button>
+                    {can('financeira', 'create') && (
+                        <Button onClick={handleCreate} className="bg-neon-cyan hover:bg-neon-cyan/80 text-white font-bold ml-4">
+                            <Plus className="mr-2 h-4 w-4" /> Novo Pagamento
+                        </Button>
+                    )}
+                </div>
             </div>
 
             {!payments || payments.length === 0 ? (
@@ -104,12 +132,14 @@ export function PaymentsTable() {
                                             }).format(payment.amount)}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm" asChild>
-                                                <a href={payment.attachment_url} target="_blank" rel="noopener noreferrer">
-                                                    <Download className="h-4 w-4 mr-2" />
-                                                    PDF
-                                                </a>
-                                            </Button>
+                                            {payment.attachment_url && (
+                                                <Button variant="ghost" size="sm" asChild>
+                                                    <a href={payment.attachment_url} target="_blank" rel="noopener noreferrer">
+                                                        <Download className="h-4 w-4 mr-2" />
+                                                        PDF
+                                                    </a>
+                                                </Button>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(payment)}>

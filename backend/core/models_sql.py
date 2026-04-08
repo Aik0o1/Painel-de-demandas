@@ -232,6 +232,7 @@ class Contract(Base):
     sectorId: Mapped[Optional[str]] = mapped_column("sectorId", String(36), nullable=True)
     contractNumber: Mapped[Optional[str]] = mapped_column("contractNumber", String(50), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="ACTIVE")
+    attachmentUrl: Mapped[Optional[str]] = mapped_column("attachmentUrl", String(1024), nullable=True)
     createdAt: Mapped[datetime] = mapped_column("createdAt", DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column("updatedAt", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

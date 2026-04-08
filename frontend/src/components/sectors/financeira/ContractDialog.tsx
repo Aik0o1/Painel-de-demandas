@@ -1,8 +1,10 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
 import { maskCurrency, parseCurrency } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
     FuturisticModal,
     FuturisticInput,
@@ -13,12 +15,13 @@ interface ContractDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     contract?: any;
-    onSave: (data: any) => Promise<void>;
+    onSave: (data: any, file?: File) => Promise<void>;
 }
 
 export function ContractDialog({ open, onOpenChange, contract, onSave }: ContractDialogProps) {
     const isEditing = !!contract;
     const { register, handleSubmit, reset, setValue, control, formState: { isSubmitting } } = useForm();
+    const [file, setFile] = useState<File | null>(null);
 
     useEffect(() => {
         if (contract) {
@@ -41,9 +44,11 @@ export function ContractDialog({ open, onOpenChange, contract, onSave }: Contrac
             }
 
             setValue("status", contract.status);
+            setFile(null); // Reset file
         } else {
             reset();
             setValue("status", "ACTIVE");
+            setFile(null);
         }
         register("status");
     }, [contract, setValue, reset, register]);
@@ -54,9 +59,10 @@ export function ContractDialog({ open, onOpenChange, contract, onSave }: Contrac
             ...data,
             value: parseCurrency(data.value)
         };
-        await onSave(payload);
+        await onSave(payload, file || undefined);
         onOpenChange(false);
         reset();
+        setFile(null);
     };
 
     const onError = (errors: any) => {
@@ -108,6 +114,18 @@ export function ContractDialog({ open, onOpenChange, contract, onSave }: Contrac
                             type="date"
                             {...register("end_date", { required: true })}
                         />
+                    </div>
+
+                    <div className="space-y-1">
+                        <Label className="text-sm font-medium text-slate-300">Anexo do Contrato</Label>
+                        <Input
+                            type="file"
+                            onChange={(e) => setFile(e.target.files?.[0] || null)}
+                            className="bg-slate-900 border-slate-700 text-slate-300"
+                        />
+                        {contract?.attachment_url && !file && (
+                            <p className="text-xs text-slate-400 mt-1">Este contrato já possui um anexo. O envio de um novo substituirá o atual.</p>
+                        )}
                     </div>
 
                     <div className="pt-2">

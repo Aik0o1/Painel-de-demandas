@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Plus, FileText } from "lucide-react";
+import { Edit, Trash2, Plus, FileText, Download } from "lucide-react";
 import { ContractDialog } from "./ContractDialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -31,13 +31,21 @@ export function ContractsList() {
     });
 
     const mutation = useMutation({
-        mutationFn: async (newContract: any) => {
-            const isUpdate = !!newContract.id;
+        mutationFn: async ({ payload, file }: { payload: any, file?: File }) => {
+            const isUpdate = !!payload.id;
+            let result;
             if (isUpdate) {
-                return apiPut(`/contracts/${newContract.id}`, newContract);
+                result = await apiPut(`/contracts/${payload.id}`, payload);
             } else {
-                return apiPost('/contracts', newContract);
+                result = await apiPost('/contracts', payload);
             }
+
+            if (file) {
+                const formData = new FormData();
+                formData.append("file", file);
+                await apiPost(`/contracts/${result.id || payload.id}/attachment`, formData);
+            }
+            return result;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['contracts'] });
@@ -48,8 +56,8 @@ export function ContractsList() {
         }
     });
 
-    const handleSave = async (data: any) => {
-        mutation.mutate(data);
+    const handleSave = async (payload: any, file?: File) => {
+        mutation.mutate({ payload, file });
     };
 
     const handleDelete = async (id: string) => {
@@ -124,14 +132,46 @@ export function ContractsList() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => { setSelectedContract(contract); setIsDialogOpen(true); }}>
-                                            {can('financeira', 'update') ? <Edit className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                                        </Button>
-                                        {can('financeira', 'delete') && (
-                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(contract.id)}>
-                                                <Trash2 className="h-4 w-4" />
+                                        <div className="flex justify-end items-center gap-2">
+                                            {contract.attachment_url && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => window.open(contract.attachment_url, '_blank')}
+                                                    title="Ver Anexo"
+                                                    className="flex items-center gap-2"
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                    PDF
+                                                </Button>
+                                            )}
+
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => {
+                                                    setSelectedContract(contract);
+                                                    setIsDialogOpen(true);
+                                                }}
+                                            >
+                                                {can('financeira', 'update') ? (
+                                                    <Edit className="h-4 w-4" />
+                                                ) : (
+                                                    <FileText className="h-4 w-4" />
+                                                )}
                                             </Button>
-                                        )}
+
+                                            {can('financeira', 'delete') && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="text-destructive"
+                                                    onClick={() => handleDelete(contract.id)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))
