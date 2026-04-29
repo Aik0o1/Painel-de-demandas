@@ -1,5 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Form, Request
+from core.limiter import limiter
 from fastapi.responses import FileResponse
+from core.upload_utils import validate_upload_file
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -11,6 +13,7 @@ from core.security import get_current_user
 import uuid
 import os
 import shutil
+
 
 import subprocess
 from reportlab.lib.pagesizes import letter
@@ -72,7 +75,7 @@ def fmt_file(f: ItReport) -> dict:
         "id": f.id,
         "name": f.name,
         "originalName": f.originalName,
-        "filePath": f.filePath,
+        "downloadUrl": f"/api/it-reports/files/{f.id}/download",
         "fileSize": f.fileSize,
         "mimeType": f.mimeType,
         "directoryId": f.directoryId,
@@ -193,7 +196,9 @@ async def upload_file(
     stored_name = f"{file_id}{extension}"
     stored_path = os.path.join(UPLOAD_DIR, stored_name)
 
-    # Save file to disk
+    await validate_upload_file(file)
+
+    # Save file to disk securely
     with open(stored_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
@@ -223,25 +228,29 @@ async def upload_file(
 
 
 @router.post("/generate", status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/hour")  # SECURITY FIX: Rate limiting para evitar abuso
 async def generate_command_report(
     body: ReportGenerate,
+    request: Request,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    valid_commands = ["df", "last", "uptime", "free", "who", "top", "lsblk", "dmesg"]
+    # SECURITY FIX: Remove comandos sensíveis (dmesg, who, top) e limita a comandos seguros
+    valid_commands = ["df", "uptime", "free", "lsblk"]
     if body.command not in valid_commands:
         raise HTTPException(status_code=400, detail=f"Comando inválido. Escolha entre: {', '.join(valid_commands)}")
 
     try:
         # Executa o comando
-        if body.command == "df":
-            cmd = ["df", "-h"]
-        elif body.command == "last":
-            cmd = ["last", "-n", "20"]
-        elif body.command == "top":
-            cmd = ["top", "-b", "-n", "1"]
-        else:
-            cmd = [body.command]
+        command_map = {
+            "df": ["df", "-h"],
+            "uptime": ["uptime"],
+            "free": ["free", "-h"],
+            "lsblk": ["lsblk"],
+        }
+        cmd = command_map.get(body.command)
+        if not cmd:
+            raise HTTPException(status_code=400, detail="Comando inválido")
 
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         output_text = result.stdout

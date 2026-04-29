@@ -6,11 +6,11 @@ from sqlalchemy import select, update
 from core.database_sql import get_db
 from core.models_sql import User
 from core.security import get_current_user
+from core.upload_utils import validate_upload_file
 from passlib.context import CryptContext
+from core.limiter import limiter
+from fastapi import Request
 import os
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-import uuid
 import shutil
 
 router = APIRouter()
@@ -33,11 +33,13 @@ def format_profile(user: User):
     }
 
 @router.get("/me", status_code=status.HTTP_200_OK)
-async def get_my_profile(user: User = Depends(get_current_user)):
+@limiter.limit("20/minute")
+async def get_my_profile(request: Request, user: User = Depends(get_current_user)):
     return format_profile(user)
 
 @router.get("", status_code=status.HTTP_200_OK)
-async def list_profiles(db_session: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def list_profiles(request: Request, user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(User).order_by(User.name))
     users = result.scalars().all()
     return [format_profile(u) for u in users]
@@ -101,6 +103,7 @@ async def upload_avatar(
     user: User = Depends(get_current_user),
     db_session: AsyncSession = Depends(get_db)
 ):
+    await validate_upload_file(file)
     # Validar extensão
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp"]:

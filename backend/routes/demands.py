@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Header, Depends
+from fastapi import APIRouter, HTTPException, status, Header, Depends, Request
 from pydantic import BaseModel
 from typing import List, Optional, Any, Dict
 from datetime import datetime
@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from core.database_sql import get_db
 from core.models_sql import User, Demand
+from core.security import get_current_user
+from core.limiter import limiter
 import uuid
 
 router = APIRouter()
@@ -89,7 +91,10 @@ async def format_demand(demand: Demand, db_session: AsyncSession):
     return data
 
 @router.get("", status_code=status.HTTP_200_OK)
-async def get_demands(db_session: AsyncSession = Depends(get_db)):
+async def get_demands(
+    user: User = Depends(get_current_user),
+    db_session: AsyncSession = Depends(get_db)
+):
     try:
         result = await db_session.execute(select(Demand).order_by(Demand.createdAt.desc()))
         demands = result.scalars().all()
@@ -99,7 +104,11 @@ async def get_demands(db_session: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("", status_code=status.HTTP_201_CREATED)
-async def create_demand(demand: DemandCreate, x_user_email: Optional[str] = Header(None), db_session: AsyncSession = Depends(get_db)):
+async def create_demand(
+    demand: DemandCreate,
+    user: User = Depends(get_current_user),
+    db_session: AsyncSession = Depends(get_db)
+):
     try:
         due_date = None
         if demand.due_date:
@@ -116,7 +125,7 @@ async def create_demand(demand: DemandCreate, x_user_email: Optional[str] = Head
             priority=demand.priority,
             status="pending",
             assignedTo=demand.assigned_to,
-            createdBy=x_user_email or "unknown",
+            createdBy=user.email,  # Usa email do usuário autenticado
             dueDate=due_date,
             createdAt=datetime.utcnow(),
             updatedAt=datetime.utcnow()
@@ -139,7 +148,12 @@ async def create_demand(demand: DemandCreate, x_user_email: Optional[str] = Head
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{id}", status_code=status.HTTP_200_OK)
-async def update_demand(id: str, update_data: DemandUpdate, db_session: AsyncSession = Depends(get_db)):
+async def update_demand(
+    id: str,
+    update_data: DemandUpdate,
+    user: User = Depends(get_current_user),
+    db_session: AsyncSession = Depends(get_db)
+):
     result = await db_session.execute(select(Demand).where(Demand.id == id))
     demand = result.scalar_one_or_none()
     
@@ -189,7 +203,11 @@ async def update_demand(id: str, update_data: DemandUpdate, db_session: AsyncSes
     return await format_demand(demand, db_session)
 
 @router.delete("/{id}", status_code=status.HTTP_200_OK)
-async def delete_demand(id: str, db_session: AsyncSession = Depends(get_db)):
+async def delete_demand(
+    id: str,
+    user: User = Depends(get_current_user),
+    db_session: AsyncSession = Depends(get_db)
+):
     result = await db_session.execute(delete(Demand).where(Demand.id == id))
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Demand not found")

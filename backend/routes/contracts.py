@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
 from fastapi.responses import FileResponse
+from core.upload_utils import validate_upload_file
 from pydantic import BaseModel
 import os
 import shutil
@@ -137,6 +138,8 @@ async def upload_attachment(
     if not contract:
         raise HTTPException(status_code=404, detail="Contract not found")
         
+    await validate_upload_file(file)
+    
     extension = os.path.splitext(file.filename or "")[1]
     stored_name = f"{id}{extension}"
     stored_path = os.path.join(UPLOAD_DIR, stored_name)

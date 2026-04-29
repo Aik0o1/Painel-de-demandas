@@ -1,8 +1,25 @@
+"""
+Script de migração para criar tabela ticket_assignees.
+Requer DATABASE_URL definida no ambiente.
+"""
 import asyncio
+import os
+import sys
 from sqlalchemy.ext.asyncio import create_async_engine
 
+# SECURITY FIX: Remove hardcoded credentials, require env var
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    print("ERRO CRÍTICO: Variável de ambiente DATABASE_URL não definida.")
+    sys.exit(1)
+
+# Garante que está usando o driver async
+if not DATABASE_URL.startswith("postgresql+asyncpg"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+
 async def run():
-    engine = create_async_engine("postgresql+asyncpg://postgres:password@localhost:5433/demand_navigator", echo=True)
+    # SECURITY FIX: Remove echo=True para não logar dados sensíveis
+    engine = create_async_engine(DATABASE_URL, echo=False)
     async with engine.begin() as conn:
         from sqlalchemy import text
         await conn.execute(text("""
@@ -18,6 +35,7 @@ async def run():
             ON CONFLICT DO NOTHING;
         """))
     await engine.dispose()
+    print("Migração de ticket_assignees concluída com sucesso.")
 
 if __name__ == '__main__':
     asyncio.run(run())

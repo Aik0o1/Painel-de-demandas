@@ -42,7 +42,22 @@ async def generate_report(
     output = io.StringIO()
     # Add BOM for Excel compatibility with UTF-8
     output.write('\ufeff')
-    writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_MINIMAL)
+    writer = csv.writer(output, delimiter=';', quotechar='"', quoting=csv.QUOTE_ALL, doublequote=True)
+
+    def clean_csv_value(value):
+        if value is None:
+            return ""
+        val_str = str(value)
+        # Prevent CSV Formula Injection
+        if val_str and val_str[0] in ('=', '+', '-', '@', '\t', '\r', '\n'):
+            val_str = "'" + val_str
+        return val_str
+
+    # Wrap writerow to automatically clean values
+    original_writerow = writer.writerow
+    def safe_writerow(row):
+        original_writerow([clean_csv_value(v) for v in row])
+    writer.writerow = safe_writerow
 
     if type == "demands":
         stmt = select(Demand).order_by(Demand.createdAt.desc())

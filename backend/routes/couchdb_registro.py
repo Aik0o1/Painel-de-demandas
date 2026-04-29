@@ -1,10 +1,13 @@
-from fastapi import APIRouter, HTTPException, Security
+from fastapi import APIRouter, HTTPException, Security, Depends
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 import os
 import io
 from core.couchdb_client import get_registro_db
 from services.pdf_generator import gerar_relatorio_from_data
+
+from core.security import get_current_user
+from core.models_sql import User
 
 router = APIRouter()
 
@@ -19,7 +22,10 @@ def verify_token(token: str = Security(api_key_header)):
 
 
 @router.get("/docs", summary="Lista todos os documentos do banco de registro")
-def list_docs(token: str = Security(verify_token)):
+def list_docs(
+    user: User = Depends(get_current_user),
+    token: str = Security(verify_token)
+):
     """Retorna todos os documentos do banco painel_de_demandas_dados_registro."""
     try:
         db = get_registro_db()
@@ -30,7 +36,11 @@ def list_docs(token: str = Security(verify_token)):
 
 
 @router.get("/docs/{doc_id}", summary="Busca um documento específico por ID")
-def get_doc(doc_id: str, token: str = Security(verify_token)):
+def get_doc(
+    doc_id: str,
+    user: User = Depends(get_current_user),
+    token: str = Security(verify_token)
+):
     """Retorna um documento específico pelo seu _id do CouchDB."""
     try:
         db = get_registro_db()
@@ -44,7 +54,10 @@ def get_doc(doc_id: str, token: str = Security(verify_token)):
 
 
 @router.get("/info", summary="Informações do banco de dados CouchDB")
-def db_info(token: str = Security(verify_token)):
+def db_info(
+    user: User = Depends(get_current_user),
+    token: str = Security(verify_token)
+):
     """Retorna metadados do banco de dados painel_de_demandas_dados_registro."""
     try:
         db = get_registro_db()

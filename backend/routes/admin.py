@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
@@ -9,34 +9,62 @@ from core.models_sql import User, UserStatus, Session
 from passlib.context import CryptContext
 from datetime import datetime
 from core.security import get_current_user
+from core.audit import log_action
+from fastapi import Request
+from core.limiter import limiter
 import os
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserUpdate(BaseModel):
-    userId: str
-    status: str
-    role: str
+    userId: int
+    status: str = Field(..., max_length=20)
+    role: str = Field(..., max_length=30)
     sector_id: Optional[str] = None
     permissions: Optional[Dict[str, Any]] = None
 
 class ResetPasswordRequest(BaseModel):
-    userId: str
-    newPassword: str
+    userId: int
+    newPassword: str = Field(..., min_length=6)
 
 @router.get("/users", status_code=status.HTTP_200_OK)
-async def list_users(db_session: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def list_users(request: Request, user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+    # Limita a Master Admin ou usuários com permissão de leitura de admin
+    if user.role != "MASTER_ADMIN" and not (user.permissions or {}).get("admin", {}).get("read"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
     """Lista todos os usuários cadastrados no sistema."""
     try:
         result = await db_session.execute(select(User).order_by(User.createdAt.desc()))
         users = result.scalars().all()
-        return users
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao listar usuários: {str(e)}")
+        # Omit passwordHash before returning
+        user_list = []
+        for u in users:
+            u_dict = {
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "image": u.image,
+                "role": u.role,
+                "cpf": u.cpf,
+                "position": u.position,
+                "function": u.function,
+                "protocolNumber": u.protocolNumber,
+                "status": u.status,
+                "permissions": u.permissions,
+                "sector_id": u.sector_id,
+                "createdAt": u.createdAt,
+                "updatedAt": u.updatedAt
+            }
+            user_list.append(u_dict)
+        return user_list
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro interno ao listar usuários")
 
 @router.put("/users", status_code=status.HTTP_200_OK)
-async def update_user(data: UserUpdate, user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+async def update_user(data: UserUpdate, request: Request, user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
     # Limit to Master Admin or users with admin update permission
     if user.role != "MASTER_ADMIN" and not (user.permissions or {}).get("admin", {}).get("update"):
         raise HTTPException(status_code=403, detail="Acesso negado")
@@ -58,15 +86,26 @@ async def update_user(data: UserUpdate, user: User = Depends(get_current_user), 
             target_user.permissions = data.permissions
         
         await db_session.commit()
+        
+        await log_action(
+            db_session=db_session,
+            action="UPDATE_USER",
+            module="ADMIN",
+            description=f"Admin {user.email} atualizou usuário {target_user.email} (Status: {data.status}, Role: {data.role})",
+            user_email=user.email,
+            user_name=user.name,
+            request=request,
+            metadata={"target_user_id": data.userId, "new_status": data.status, "new_role": data.role}
+        )
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Valor de status inválido: {str(e)}")
-    except Exception as e:
+    except Exception:
         await db_session.rollback()
-        raise HTTPException(status_code=500, detail=f"Erro ao atualizar usuário: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno ao atualizar usuário")
 
 @router.post("/users/reset-password", status_code=status.HTTP_200_OK)
-async def reset_password(data: ResetPasswordRequest, user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+async def reset_password(data: ResetPasswordRequest, request: Request, user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
     if user.role != "MASTER_ADMIN" and not (user.permissions or {}).get("admin", {}).get("update"):
         raise HTTPException(status_code=403, detail="Acesso negado")
 
@@ -84,6 +123,17 @@ async def reset_password(data: ResetPasswordRequest, user: User = Depends(get_cu
     target_user.updatedAt = datetime.utcnow()
     
     await db_session.commit()
+    
+    await log_action(
+        db_session=db_session,
+        action="RESET_PASSWORD",
+        module="ADMIN",
+        description=f"Admin {user.email} resetou senha do usuário {target_user.email}",
+        user_email=user.email,
+        user_name=user.name,
+        request=request,
+        metadata={"target_user_id": data.userId}
+    )
     return {"success": True}
 
 @router.get("/sessions", status_code=status.HTTP_200_OK)
@@ -116,11 +166,11 @@ async def list_active_sessions(user: User = Depends(get_current_user), db_sessio
             }
             for s in sessions
         ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao listar sessões: {str(e)}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro interno ao listar sessões")
 
 @router.post("/sessions/terminate", status_code=status.HTTP_200_OK)
-async def terminate_session(data: Dict[str, str], user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+async def terminate_session(data: Dict[str, str], request: Request, user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
     if user.role != "MASTER_ADMIN" and not (user.permissions or {}).get("admin", {}).get("delete"):
         raise HTTPException(status_code=403, detail="Acesso negado")
 
@@ -131,5 +181,16 @@ async def terminate_session(data: Dict[str, str], user: User = Depends(get_curre
         
     result = await db_session.execute(delete(Session).where(Session.sessionId == session_id))
     await db_session.commit()
+    
+    await log_action(
+        db_session=db_session,
+        action="TERMINATE_SESSION",
+        module="ADMIN",
+        description=f"Admin {user.email} encerrou a sessão {session_id}",
+        user_email=user.email,
+        user_name=user.name,
+        request=request,
+        metadata={"sessionId": session_id}
+    )
     
     return {"success": True, "deleted_count": result.rowcount}

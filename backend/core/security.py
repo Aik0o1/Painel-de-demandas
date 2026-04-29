@@ -7,28 +7,38 @@ from sqlalchemy import select
 from core.database_sql import get_db
 from core.models_sql import User
 
-SECRET_KEY = os.getenv("NEXTAUTH_SECRET", "al-eT3JbEwLKT7kU5gtSDI1JK3YyFCKu9cdV3G3SMDdCnn")
+SECRET_KEY = os.getenv("NEXTAUTH_SECRET")
+if not SECRET_KEY:
+    # Em produção, isso deve interromper o startup
+    raise RuntimeError("NEXTAUTH_SECRET MUST be set in environment variables!")
 ALGORITHM = "HS256"
 
+from starlette.requests import Request
+
 async def get_current_user(
-    authorization: Optional[str] = Header(None),
-    x_user_email: Optional[str] = Header(None),
+    request: Request,
     db_session: AsyncSession = Depends(get_db)
 ):
+    authorization = request.headers.get("authorization")
+    x_user_email = request.headers.get("x-user-email")
+    
     email = None
-    if x_user_email:
-        email = x_user_email
-    elif authorization and authorization.startswith("Bearer "):
+    if authorization and authorization.startswith("Bearer "):
         token = authorization.split(" ")[1]
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             email = payload.get("email")
         except Exception as e:
             print(f"JWT Decode error: {e}")
-            raise HTTPException(status_code=401, detail="Token inválido ou expirado")
+            # Se der erro no token, tentamos o header de email como fallback
+            if not x_user_email:
+                raise HTTPException(status_code=401, detail="Token inválido ou expirado")
+    
+    # Fallback para header customizado enviado pelo frontend (api.ts)
+    if not email and x_user_email:
+        email = x_user_email
     
     if not email:
-        print(f"Sessão não identificada. Headers: auth={authorization is not None}, x-email={x_user_email is not None}")
         raise HTTPException(status_code=401, detail="Sessão não identificada")
 
     result = await db_session.execute(select(User).where(User.email == email))

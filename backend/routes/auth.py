@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 import jwt
@@ -9,19 +9,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from core.database_sql import get_db
 from core.models_sql import User, UserStatus
+from core.security import SECRET_KEY, ALGORITHM
+from core.limiter import limiter
+from core.audit import log_action
 
 router = APIRouter()
-
-# Compatível com hashes criados pelo bcrypt do Node.js
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Recomendado colocar num .env para a API Python, pegamos um placeholder se n tiver
-SECRET_KEY = os.getenv("NEXTAUTH_SECRET", "super_secret_python_key")
-ALGORITHM = "HS256"
+from pydantic import BaseModel, EmailStr, Field
 
 class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
+    email: EmailStr = Field(..., max_length=255)
+    password: str = Field(..., min_length=8, max_length=128)
 
 def create_access_token(data: dict, expires_delta: timedelta):
     to_encode = data.copy()
@@ -31,7 +30,8 @@ def create_access_token(data: dict, expires_delta: timedelta):
     return encoded_jwt
 
 @router.post("/login")
-async def login(credentials: LoginRequest, db_session: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(credentials: LoginRequest, request: Request, db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(User).where(User.email == credentials.email))
     user = result.scalar_one_or_none()
     
@@ -49,14 +49,35 @@ async def login(credentials: LoginRequest, db_session: AsyncSession = Depends(ge
         )
     
     # Verifica se a senha corresponde ao hash (salvo pelo NextJS no db via bcryptjs)
-    # Bcrypt tem um limite de 72 bytes; usamos encode para truncar nos BYTES corretamente.
-    password = credentials.password.encode("utf-8")[:72]
+    # Bcrypt tem um limite de 72 bytes.
+    password_bytes = credentials.password.encode("utf-8")
     stored_hash = user.passwordHash
-    if not stored_hash or not pwd_context.verify(password, stored_hash):
+    if not stored_hash or not pwd_context.verify(password_bytes[:72], stored_hash):
+        await log_action(
+            db_session=db_session,
+            action="LOGIN_FAILED",
+            module="AUTH",
+            description=f"Tentativa de login falha para o e-mail: {credentials.email}",
+            user_email=credentials.email,
+            request=request
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciais inválidas ou senha incorreta"
+            detail="Credenciais inválidas"
         )
+
+    # Login bem-sucedido
+    await log_action(
+        db_session=db_session,
+        action="LOGIN_SUCCESS",
+        module="AUTH",
+        description=f"Usuário {user.email} logou com sucesso",
+        user_email=user.email,
+        user_name=user.name,
+        request=request
+    )
+
+
 
     # JWT gerado (Apenas representacional da PHP api antiga)
     # Obs: a autenticação real do Nextjs continuaria via NextAuth na rota web,
@@ -68,7 +89,7 @@ async def login(credentials: LoginRequest, db_session: AsyncSession = Depends(ge
     }
     
     access_token = create_access_token(
-        data=token_data, expires_delta=timedelta(hours=12)
+        data=token_data, expires_delta=timedelta(hours=1)
     )
 
     return {

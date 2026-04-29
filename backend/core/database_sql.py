@@ -19,7 +19,13 @@ elif DATABASE_URL.startswith("postgresql://"):
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
-    future=True
+    future=True,
+    pool_size=5,
+    max_overflow=10,
+    pool_recycle=3600,
+    connect_args={
+        "command_timeout": 30
+    }
 )
 
 async_session_maker = async_sessionmaker(

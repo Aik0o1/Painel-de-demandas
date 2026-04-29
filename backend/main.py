@@ -1,13 +1,17 @@
 from fastapi import FastAPI
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routes import auth, tickets, weekly_demands, projects, employees, inventory, finance, contracts, processes, registry, couchdb_registro, profiles, demands, sectors, admin, audit_logs, reports, it_reports, users, dashboard
+from routes import auth, tickets, weekly_demands, projects, employees, inventory, finance, contracts, processes, registry, couchdb_registro, profiles, demands, sectors, admin, audit_logs, reports, it_reports, users, dashboard, uploads
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from core.limiter import limiter
 
 class NormalizeTrailingSlashMiddleware(BaseHTTPMiddleware):
     """Remove barra final do path para evitar o 307 redirect que dropa o POST body."""
@@ -29,21 +33,33 @@ app = FastAPI(
 app.add_middleware(NormalizeTrailingSlashMiddleware)
 
 
-# CORS Policy equivalente ao cors.php anterior
-origins = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "*"  # Substituir na produçao por rotas fixas
-]
+# CORS Policy restrita conforme auditoria SEC-01
+target_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,https://painel.jucepi.pi.gov.br")
+origins = [o.strip() for o in target_origins.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-User-Email"],
+    expose_headers=["Content-Disposition"],
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Middleware de Headers de Segurança (SEC-07)
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:8080 http://127.0.0.1:8080;"
+    return response
+
 
 # Adiciona o router de autenticação e de tickets com os prefixos
 app.include_router(auth.router, prefix="/api/auth", tags=["Autenticação"])
@@ -67,13 +83,14 @@ app.include_router(couchdb_registro.router, prefix="/api/couchdb/registro", tags
 app.include_router(reports.router, prefix="/api/reports", tags=["Exportação de Dados"])
 app.include_router(it_reports.router, prefix="/api/it-reports", tags=["TI - Relatórios"])
 app.include_router(users.router, prefix="/api/users", tags=["Usuários"])
+app.include_router(uploads.router, prefix="/api/uploads", tags=["Uploads"])
 
 # Servir arquivos estáticos (Uploads)
 import os
 os.makedirs("uploads/avatars", exist_ok=True)
 os.makedirs("uploads/documents", exist_ok=True)
 os.makedirs("uploads/it_reports", exist_ok=True)
-app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads")
+# app.mount("/api/uploads", StaticFiles(directory="uploads"), name="uploads") # Desativado SEC-01
 
 @app.get("/")
 def read_root():
