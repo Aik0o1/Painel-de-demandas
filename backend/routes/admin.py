@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Form
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,8 +10,12 @@ from passlib.context import CryptContext
 from datetime import datetime
 from core.security import get_current_user
 from core.audit import log_action
+from core.upload_utils import validate_upload_file
+from core.couchdb_client import get_registro_db
+from services.excel_report_converter import converter_para_dict, ExcelReportError
 from fastapi import Request
 from core.limiter import limiter
+import io
 import os
 
 router = APIRouter()
@@ -192,5 +196,65 @@ async def terminate_session(data: Dict[str, str], request: Request, user: User =
         request=request,
         metadata={"sessionId": session_id}
     )
-    
+
     return {"success": True, "deleted_count": result.rowcount}
+
+
+REPORT_XLSX_EXTENSIONS = (".xlsx", ".xls")
+
+@router.post("/reports/upload", status_code=status.HTTP_201_CREATED)
+async def upload_report_spreadsheet(
+    request: Request,
+    file: UploadFile = File(...),
+    month: int = Form(...),
+    year: int = Form(...),
+    user: User = Depends(get_current_user),
+    db_session: AsyncSession = Depends(get_db)
+):
+    """Recebe a planilha mensal de produtividade (.xlsx), converte para o formato
+    padrão e salva/atualiza o documento correspondente no CouchDB."""
+    if user.role != "MASTER_ADMIN" and not (user.permissions or {}).get("admin", {}).get("create"):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    if not (1 <= month <= 12):
+        raise HTTPException(status_code=400, detail="Mês inválido")
+    if not (2000 <= year <= 2100):
+        raise HTTPException(status_code=400, detail="Ano inválido")
+
+    filename = (file.filename or "").lower()
+    if not filename.endswith(REPORT_XLSX_EXTENSIONS):
+        raise HTTPException(status_code=415, detail="Envie um arquivo .xlsx ou .xls")
+
+    await validate_upload_file(file)
+    contents = await file.read()
+
+    try:
+        relatorio = converter_para_dict(io.BytesIO(contents))
+    except ExcelReportError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=422, detail="Não foi possível processar a planilha enviada. Verifique se ela segue o formato esperado.")
+
+    doc_id = f"{month:02d}-{year}"
+
+    try:
+        db = get_registro_db()
+        if doc_id in db:
+            relatorio["_rev"] = db[doc_id]["_rev"]
+        relatorio["_id"] = doc_id
+        db.save(relatorio)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar o relatório no CouchDB: {str(e)}")
+
+    await log_action(
+        db_session=db_session,
+        action="UPLOAD_REPORT",
+        module="ADMIN",
+        description=f"Admin {user.email} enviou a planilha '{file.filename}' como relatório de {doc_id}",
+        user_email=user.email,
+        user_name=user.name,
+        request=request,
+        metadata={"doc_id": doc_id, "filename": file.filename, "mes_referencia": relatorio.get("mes_referencia")}
+    )
+
+    return {"success": True, "doc_id": doc_id, "mes_referencia": relatorio.get("mes_referencia")}

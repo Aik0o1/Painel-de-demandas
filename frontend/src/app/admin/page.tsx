@@ -5,11 +5,12 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { UserManagement } from "@/components/admin/UserManagement";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { ActiveSessionsList } from "@/components/admin/ActiveSessionsList";
+import { ReportUpload } from "@/components/admin/ReportUpload";
 import { Settings } from "lucide-react";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function AdminPage() {
-    const [activeTab, setActiveTab] = useState<'users' | 'sessions' | 'audit'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'sessions' | 'audit' | 'reports'>('users');
 
     return (
         <RoleGuard allowedRoles={['MASTER_ADMIN']}>
@@ -50,6 +51,15 @@ export default function AdminPage() {
                         >
                             Logs de Auditoria
                         </button>
+                        <button
+                            onClick={() => setActiveTab('reports')}
+                            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === 'reports'
+                                ? 'bg-white dark:bg-muted shadow-sm text-foreground'
+                                : 'text-slate-500 hover:text-foreground'
+                                }`}
+                        >
+                            Relatórios
+                        </button>
                     </div>
 
                     {/* Content Area */}
@@ -64,6 +74,11 @@ export default function AdminPage() {
                             <div className="glass-card p-6 rounded-3xl border border-white/5 bg-card/40">
                                 <h3 className="text-lg font-semibold mb-4">Logs do Sistema</h3>
                                 <AuditLogViewer />
+                            </div>
+                        )}
+                        {activeTab === 'reports' && (
+                            <div className="glass-card p-6 rounded-3xl border border-white/5 bg-card/40">
+                                <ReportUpload />
                             </div>
                         )}
                     </div>

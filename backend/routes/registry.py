@@ -32,6 +32,10 @@ class ReportPayload(BaseModel):
     year: int
     data: Any
 
+def find_mes_analise(d: dict) -> dict:
+    """Retorna o bloco '<mes>_analise' do documento do CouchDB, independente do mês."""
+    return next((v for k, v in d.items() if k.endswith("_analise") and k != "analise_geral"), {})
+
 def format_registry_entry(item: RegistryEntry):
     return {
         "id": item.id,
@@ -126,7 +130,7 @@ async def get_stats(type: Optional[str] = Query(None), month: Optional[int] = No
         
         # Mapeamento dos dados para o Frontend (Simplified version for brevity, keeping original logic)
         analyst_stats = []
-        detalhe = d.get('novembro_analise', {}).get('detalhe_por_usuario', [])
+        detalhe = find_mes_analise(d).get('detalhe_por_usuario', [])
         for u in detalhe:
             if u.get('usuario') != 'TOTAL':
                 analyst_stats.append({
@@ -187,7 +191,7 @@ async def get_stats(type: Optional[str] = Query(None), month: Optional[int] = No
             })
 
         process_stats = {'automatico': 0, 'exigencia': 0, 'deferidos': 0}
-        proc_totais = d.get('novembro_analise', {}).get('processos_totais_incluindo_deferimento_automatico', [])
+        proc_totais = find_mes_analise(d).get('processos_totais_incluindo_deferimento_automatico', [])
         for p in proc_totais:
             ptype = p.get('processo')
             qty = p.get('quantidade', 0)
