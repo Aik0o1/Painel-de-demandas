@@ -25,7 +25,7 @@ from PIL import Image as PILImage
 import calendar
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    Image, PageBreak, HRFlowable
+    Image, PageBreak, HRFlowable, KeepTogether
 )
 
 # ── Paleta de cores JUCEPI ──────────────────────────────────────────────────
@@ -234,9 +234,14 @@ def mes_label(data):
     }
     raw = str(data.get("_id", ""))
     partes = raw.split("-")
-    if len(partes) == 2:
+    if len(partes) == 2 and partes[0].strip().isdigit():
         mm, yyyy = partes[0].zfill(2), partes[1]
         return f"{meses_pt.get(mm, mm)} / {yyyy}"
+
+    # Sem _id do CouchDB (ex: validando um JSON gerado localmente) — usa mes_referencia
+    mes_ref = data.get("mes_referencia")
+    if mes_ref:
+        return f"{str(mes_ref).upper()} / {datetime.now().year}"
     return raw.upper()
 
 
@@ -301,7 +306,6 @@ def sec_status_deferimento_exigencias(data, story, mes):
     story.append(sp(0.15))
 
     # Linha resumo total
-    story.append(sub_hdr("DEFERIMENTO AUTOMATICO"))
     da = data["analise_geral"].get("deferimento_automatico_por_porte", {})
     tot = da.get("TOTAL", {"inscricao_empresa": 0, "alteracao": 0, "pedido_baixa": 0})
     story.append(make_table(
@@ -408,19 +412,12 @@ def sec_livros_atualizacao(data, story, mes):
 
     story.append(sub_hdr("ANALISE DE LIVROS"))
     livros = data.get("analise_geral", {}).get("analise_livros", {})
-    def lst(key):
-        return livros.get(key, {"analisados": 0, "exigencia": 0})
     rows_l = [
-        ["GELZUITA",
-         lst("GELZUITA").get("analisados", 0),
-         lst("GELZUITA").get("exigencia", 0)],
-        ["DEFERIMENTO AUTOMATICO",
-         lst("DEFERIMENTO_AUTOMATICO").get("analisados", 0),
-         lst("DEFERIMENTO_AUTOMATICO").get("exigencia", 0)],
-        ["TOTAL",
-         lst("TOTAL").get("analisados", 0),
-         lst("TOTAL").get("exigencia", 0)],
+        [nome.replace("_", " "), vals.get("analisados", 0), vals.get("exigencia", 0)]
+        for nome, vals in livros.items() if nome != "TOTAL"
     ]
+    total_l = livros.get("TOTAL", {"analisados": 0, "exigencia": 0})
+    rows_l.append(["TOTAL", total_l.get("analisados", 0), total_l.get("exigencia", 0)])
     story.append(make_table(["USUARIO", "ANALISADOS", "EXIGENCIA"],
                             rows_l, col_widths=[USABLE_W / 3] * 3))
     story.append(sp())
@@ -526,23 +523,26 @@ def sec_suporte(data, story, mes):
     cw2 = [USABLE_W - 3.5*cm, 3.5*cm]
 
     # E-MAIL
-    story.append(sub_hdr("E-MAIL"))
     email_list = cc.get("email_por_atendente", [])
     rows_e = [[a.get("atendente", ""), a.get("total", 0)] for a in email_list]
     rows_e.append(["TOTAL", sum(a.get("total", 0) for a in email_list)])
-    story.append(make_table(["ATENDENTE", "TOTAL"], rows_e, col_widths=cw2))
+    story.append(KeepTogether([
+        sub_hdr("E-MAIL"),
+        make_table(["ATENDENTE", "TOTAL"], rows_e, col_widths=cw2)
+    ]))
     story.append(sp())
 
     # ATENDIMENTO CALL CENTER
-    story.append(sub_hdr("ATENDIMENTO CALL CENTER"))
     at_list = cc.get("atendimentos_call_center", [])
     rows_c = [[a.get("atendente", ""), a.get("atendimentos", 0)] for a in at_list]
     rows_c.append(["TOTAL", sum(a.get("atendimentos", 0) for a in at_list)])
-    story.append(make_table(["ATENDENTE", "ATENDIMENTOS"], rows_c, col_widths=cw2))
+    story.append(KeepTogether([
+        sub_hdr("ATENDIMENTO CALL CENTER"),
+        make_table(["ATENDENTE", "ATENDIMENTOS"], rows_c, col_widths=cw2)
+    ]))
     story.append(sp())
 
     # TEMPO MEDIO CALL CENTER
-    story.append(sub_hdr("TEMPO MEDIO CALL CENTER"))
     tm_list = cc.get("tempo_medio_por_atendente", [])
     rows_t = [[a.get("atendente", ""), a.get("duracao", "00:00:00")] for a in tm_list]
     tot_tm = 0
@@ -553,12 +553,13 @@ def sec_suporte(data, story, mes):
         except Exception:
             pass
     rows_t.append(["TOTAL", f"{tot_tm//3600:02d}:{(tot_tm%3600)//60:02d}:{tot_tm%60:02d}"])
-    story.append(make_table(["ATENDENTE", "DURACAO"], rows_t, col_widths=cw2))
+    story.append(KeepTogether([
+        sub_hdr("TEMPO MEDIO CALL CENTER"),
+        make_table(["ATENDENTE", "DURACAO"], rows_t, col_widths=cw2)
+    ]))
     story.append(sp())
 
-    # DURACAO TOTAL CALL CENTER — quebra de pagina para garantir que fique junto
-    story.append(PageBreak())
-    story.append(sub_hdr("DURACAO TOTAL CALL CENTER"))
+    # DURACAO TOTAL CALL CENTER
     dt_list = cc.get("duracao_total_call_center", [])
     rows_d = [[a.get("atendente", ""), a.get("duracao", "00:00:00")] for a in dt_list]
     def _hms(s):
@@ -569,7 +570,10 @@ def sec_suporte(data, story, mes):
             return 0
     tot_d = sum(_hms(a.get("duracao", "00:00:00")) for a in dt_list)
     rows_d.append(["TOTAL", f"{tot_d//3600:02d}:{(tot_d%3600)//60:02d}:{tot_d%60:02d}"])
-    story.append(make_table(["ATENDENTE", "DURACAO"], rows_d, col_widths=cw2))
+    story.append(KeepTogether([
+        sub_hdr("DURACAO TOTAL CALL CENTER"),
+        make_table(["ATENDENTE", "DURACAO"], rows_d, col_widths=cw2)
+    ]))
     story.append(PageBreak())
 
 
