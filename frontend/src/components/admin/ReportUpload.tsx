@@ -115,7 +115,7 @@ export function ReportUpload() {
                             </>
                         ) : (
                             <>
-                                <FileSpreadsheet className="h-4 w-4" /> Enviar e gerar relatório
+                                <FileSpreadsheet className="h-4 w-4" /> Enviar para o banco de dados
                             </>
                         )}
                     </Button>

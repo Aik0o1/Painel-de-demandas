@@ -58,7 +58,7 @@ export default function AdminPage() {
                                 : 'text-slate-500 hover:text-foreground'
                                 }`}
                         >
-                            Relatórios
+                            Upload Dados
                         </button>
                     </div>
 
