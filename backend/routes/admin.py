@@ -18,14 +18,14 @@ router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserUpdate(BaseModel):
-    userId: int
+    userId: str
     status: str = Field(..., max_length=20)
     role: str = Field(..., max_length=30)
     sector_id: Optional[str] = None
     permissions: Optional[Dict[str, Any]] = None
 
 class ResetPasswordRequest(BaseModel):
-    userId: int
+    userId: str
     newPassword: str = Field(..., min_length=6)
 
 @router.get("/users", status_code=status.HTTP_200_OK)
