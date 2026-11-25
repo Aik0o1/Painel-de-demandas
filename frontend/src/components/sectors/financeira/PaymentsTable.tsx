@@ -41,7 +41,12 @@ export function PaymentsTable() {
     });
 
     const payments = data?.data || [];
-    const meta = data?.meta || { totalPages: 1, page: 1, total: 0 };
+    // O backend devolve totalPages/page/total no nível raiz da resposta.
+    const meta = {
+        totalPages: Math.max(1, data?.totalPages || 1),
+        page: data?.page || 1,
+        total: data?.total || 0,
+    };
 
     const handleCreate = () => {
         setSelectedPayment(null);
@@ -64,21 +69,21 @@ export function PaymentsTable() {
                 <div className="flex items-center gap-2">
                     <Button 
                         variant={statusFilter === 'all' ? 'default' : 'outline'} 
-                        onClick={() => setStatusFilter('all')}
+                        onClick={() => { setStatusFilter('all'); setPage(1); }}
                         size="sm"
                     >
                         Todos
                     </Button>
                     <Button 
                         variant={statusFilter === 'emitido' ? 'default' : 'outline'} 
-                        onClick={() => setStatusFilter('emitido')}
+                        onClick={() => { setStatusFilter('emitido'); setPage(1); }}
                         size="sm"
                     >
                         Emitido
                     </Button>
                     <Button 
                         variant={statusFilter === 'não_emitido' ? 'default' : 'outline'} 
-                        onClick={() => setStatusFilter('não_emitido')}
+                        onClick={() => { setStatusFilter('não_emitido'); setPage(1); }}
                         size="sm"
                     >
                         Não Emitido
@@ -113,7 +118,7 @@ export function PaymentsTable() {
                             </TableHeader>
                             <TableBody>
                                 {payments.map((payment: any) => (
-                                    <TableRow key={payment._id}>
+                                    <TableRow key={payment.id}>
                                         <TableCell className="font-medium">{payment.description}</TableCell>
 
                                         <TableCell>{payment.supplier}</TableCell>

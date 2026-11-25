@@ -96,18 +96,24 @@ async def update_budget_category(data: BudgetCategoryUpdate, user: User = Depend
 async def get_payments(request: Request, page: int = 1, limit: int = 10, status_filter: Optional[str] = Query(None, alias="status"), user: User = Depends(check_permission("financeira", "read")), db_session: AsyncSession = Depends(get_db)):
     skip = (page - 1) * limit
     
-    query = select(FinanceTransaction)
-    if status_filter and hasattr(FinanceTransaction, 'status'):
-        query = query.where(FinanceTransaction.status == status_filter)
+    # Filtros da tela "Contas Pagas": Emitido = possui comprovante anexado.
+    has_attachment = (FinanceTransaction.attachmentUrl.isnot(None)) & (FinanceTransaction.attachmentUrl != "")
+    conditions = []
+    if status_filter == "emitido":
+        conditions.append(has_attachment)
+    elif status_filter in ("não_emitido", "nao_emitido"):
+        conditions.append(~has_attachment)
+    elif status_filter:
+        conditions.append(FinanceTransaction.status == status_filter)
+
+    query = select(FinanceTransaction).where(*conditions)
 
     result = await db_session.execute(
         query.order_by(FinanceTransaction.date.desc()).offset(skip).limit(limit)
     )
     transactions = result.scalars().all()
     
-    count_query = select(func.count(FinanceTransaction.id))
-    if status_filter and hasattr(FinanceTransaction, 'status'):
-        count_query = count_query.where(FinanceTransaction.status == status_filter)
+    count_query = select(func.count(FinanceTransaction.id)).where(*conditions)
         
     count_result = await db_session.execute(count_query)
     total = count_result.scalar() or 0
