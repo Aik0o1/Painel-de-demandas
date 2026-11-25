@@ -19,6 +19,18 @@ import io
 import os
 
 router = APIRouter()
+
+
+def ensure_can_manage(actor: User, target: User, new_role: Optional[str] = None) -> None:
+    """
+    Só MASTER_ADMIN pode alterar/redefinir a senha de outro MASTER_ADMIN ou
+    conceder o papel MASTER_ADMIN. Sem isso, quem tinha apenas a permissão
+    admin.update podia se promover ou assumir a conta do administrador master.
+    """
+    if actor.role == "MASTER_ADMIN":
+        return
+    if target.role == "MASTER_ADMIN" or new_role == "MASTER_ADMIN":
+        raise HTTPException(status_code=403, detail="Apenas o administrador master pode realizar esta ação.")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserUpdate(BaseModel):
@@ -80,7 +92,11 @@ async def update_user(data: UserUpdate, request: Request, user: User = Depends(g
         
         if not target_user:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
-        
+
+        ensure_can_manage(user, target_user, data.role)
+        if target_user.id == user.id and user.role == "MASTER_ADMIN" and data.role != "MASTER_ADMIN":
+            raise HTTPException(status_code=400, detail="Você não pode remover o seu próprio papel de administrador master.")
+
         target_user.status = UserStatus(data.status)
         target_user.role = data.role
         target_user.sector_id = data.sector_id
@@ -102,6 +118,8 @@ async def update_user(data: UserUpdate, request: Request, user: User = Depends(g
             metadata={"target_user_id": data.userId, "new_status": data.status, "new_role": data.role}
         )
         return {"success": True}
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Valor de status inválido: {str(e)}")
     except Exception:
@@ -119,7 +137,9 @@ async def reset_password(data: ResetPasswordRequest, request: Request, user: Use
     
     if not target_user:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
-    
+
+    ensure_can_manage(user, target_user)
+
     # Hash da nova senha usando bcrypt (mesmo padrão do NextAuth/Node)
     # Bcrypt tem um limite de 72 bytes; usamos encode para truncar nos BYTES corretamente.
     hashed_password = pwd_context.hash(data.newPassword.encode("utf-8")[:72])
