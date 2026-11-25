@@ -4,6 +4,9 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from 'crypto';
 import { prisma } from "@/lib/prisma";
 
+const MAX_FAILED_LOGINS = 5;
+const LOGIN_LOCK_WINDOW_MS = 15 * 60 * 1000;
+
 export const authOptions: NextAuthOptions = {
     providers: [
         CredentialsProvider({
@@ -25,6 +28,18 @@ export const authOptions: NextAuthOptions = {
 
                 if (!user) {
                     throw new Error("No user found with this email");
+                }
+
+                // Proteção contra força bruta: bloqueia após várias senhas erradas recentes.
+                const recentFailures = await prisma.auditLog.count({
+                    where: {
+                        userEmail: user.email,
+                        action: 'LOGIN_FAILED',
+                        createdAt: { gte: new Date(Date.now() - LOGIN_LOCK_WINDOW_MS) },
+                    },
+                });
+                if (recentFailures >= MAX_FAILED_LOGINS) {
+                    throw new Error("Muitas tentativas de login. Tente novamente em 15 minutos.");
                 }
 
                 // Check Status strictly

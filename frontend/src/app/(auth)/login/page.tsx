@@ -55,6 +55,8 @@ export default function LoginPage() {
                     toast.error("Sua conta está em análise. Aguarde a liberação pelo administrador.");
                 } else if (result.error.includes("rejeitada")) {
                     toast.error("Sua conta foi rejeitada pelo administrador.");
+                } else if (result.error.includes("tentativas")) {
+                    toast.error("Muitas tentativas de login. Tente novamente em 15 minutos.");
                 } else if (result.error.includes("bloqueada")) {
                     toast.error("Sua conta está bloqueada.");
                 } else {
