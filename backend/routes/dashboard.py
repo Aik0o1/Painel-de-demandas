@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload, joinedload
 from core.database_sql import get_db
-from core.security import get_current_user
+from core.security import get_current_user, user_can_read
 from core.models_sql import (
     Demand, Ticket, Process, Project, FinanceTransaction, RegistryEntry, User
 )
@@ -269,7 +269,13 @@ async def get_all_items(user: User = Depends(get_current_user), db_session: Asyn
 
     # Ordena tudo por data de criação desc
     items.sort(key=lambda x: x["created_at"] or "", reverse=True)
-    return items
+    # Cada usuário só vê itens dos setores que pode acessar (mesma regra do menu).
+    allowed = {"geral"}
+    module_of = {"financeiro": "financeira"}  # chave do item -> módulo de permissão
+    for sector in {it["sector"] for it in items} - allowed:
+        if await user_can_read(user, module_of.get(sector, sector), db_session):
+            allowed.add(sector)
+    return [it for it in items if it["sector"] in allowed]
 
 
 # ────────────────────────────────────────────────────────

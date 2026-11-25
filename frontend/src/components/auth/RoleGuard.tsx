@@ -44,10 +44,15 @@ export function RoleGuard({ children, allowedRoles, allowedSectorSlugs }: RoleGu
         }
 
         if (allowedSectorSlugs && allowedSectorSlugs.length > 0) {
+            // Mesma regra do menu lateral e do backend (core/security.py user_can_read):
+            // lotado no setor OU com permissão <setor>.read.
             const userSector = sectors.find((s: any) => s.id === profile.sector_id);
-            if (!userSector || !allowedSectorSlugs.includes(userSector.slug)) {
-                hasSectorAccess = false;
-            }
+            const isAssigned = allowedSectorSlugs.some((slug) =>
+                profile.sector_id === slug ||
+                (userSector && (userSector.slug === slug || userSector.name === slug))
+            );
+            const hasReadPerm = allowedSectorSlugs.some((slug) => !!profile.permissions?.[slug]?.read);
+            hasSectorAccess = isAssigned || hasReadPerm;
         }
 
         setIsAuthorized(hasRoleAccess && hasSectorAccess);

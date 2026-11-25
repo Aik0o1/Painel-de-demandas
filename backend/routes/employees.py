@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from core.database_sql import get_db
 from core.models_sql import User, Employee
-from core.security import get_current_user, check_permission
+from core.security import get_current_user, check_permission, check_read
 import uuid
 
 router = APIRouter()
@@ -47,7 +47,7 @@ def format_employee(emp: Employee):
     }
 
 @router.get("", status_code=status.HTTP_200_OK)
-async def get_employees(user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+async def get_employees(user: User = Depends(check_read("administrativa")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(Employee).order_by(Employee.createdAt.desc()))
     employees = result.scalars().all()
     return [format_employee(e) for e in employees]

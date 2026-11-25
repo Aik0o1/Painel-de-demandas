@@ -7,7 +7,7 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.exc import IntegrityError
 from core.database_sql import get_db
 from core.models_sql import User, Process
-from core.security import get_current_user, check_permission
+from core.security import get_current_user, check_permission, check_read
 import uuid
 
 router = APIRouter()
@@ -54,7 +54,7 @@ def format_process(p: Process):
     }
 
 @router.get("", status_code=status.HTTP_200_OK)
-async def get_processes(user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+async def get_processes(user: User = Depends(check_read("procuradoria")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(Process).order_by(Process.createdAt.desc()))
     processes = result.scalars().all()
     return [format_process(p) for p in processes]

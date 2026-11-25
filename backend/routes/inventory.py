@@ -7,7 +7,7 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.exc import IntegrityError
 from core.database_sql import get_db
 from core.models_sql import User, InventoryItem
-from core.security import get_current_user, check_permission
+from core.security import get_current_user, check_permission, check_read
 import uuid
 
 router = APIRouter()
@@ -39,7 +39,7 @@ def format_item(item: InventoryItem):
     }
 
 @router.get("", status_code=status.HTTP_200_OK)
-async def get_inventory(user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+async def get_inventory(user: User = Depends(check_read("administrativa")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(InventoryItem).order_by(InventoryItem.createdAt.desc()))
     items = result.scalars().all()
     return [format_item(i) for i in items]

@@ -7,7 +7,7 @@ from core.database_sql import get_db
 from core.models_sql import User, Project, Sector
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select, update, delete, func
-from core.security import get_current_user, check_permission
+from core.security import get_current_user, check_permission, check_read
 import uuid
 
 router = APIRouter()
@@ -72,7 +72,7 @@ async def get_comunicacao_users(user: User = Depends(get_current_user), db_sessi
     return [{"id": u.id, "name": u.name} for u in users]
 
 @router.get("", status_code=status.HTTP_200_OK)
-async def get_projects(user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+async def get_projects(user: User = Depends(check_read("comunicacao")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(
         select(Project)
         .options(selectinload(Project.assignedUsers))

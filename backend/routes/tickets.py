@@ -7,7 +7,7 @@ from sqlalchemy import select, update, delete, func
 from sqlalchemy.orm import joinedload
 from core.database_sql import get_db
 from core.models_sql import User, Ticket, Sector, UserStatus
-from core.security import get_current_user, check_permission
+from core.security import get_current_user, check_permission, check_read
 import uuid
 import logging
 
@@ -119,7 +119,7 @@ async def get_ti_users(
 @router.get("", status_code=status.HTTP_200_OK)
 async def get_tickets(
     sub_sector: Optional[str] = Query(None),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(check_read("ti")),
     db_session: AsyncSession = Depends(get_db)
 ):
     query = select(Ticket).options(joinedload(Ticket.assignedTo), joinedload(Ticket.assignedUsers))

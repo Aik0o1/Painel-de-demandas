@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from core.database_sql import get_db
 from core.models_sql import User, WeeklyDemand
-from core.security import get_current_user, check_permission
+from core.security import get_current_user, check_permission, check_read
 
 router = APIRouter()
 
@@ -26,7 +26,7 @@ def format_demand(demand: WeeklyDemand):
     }
 
 @router.get("", status_code=status.HTTP_200_OK)
-async def get_weekly_demand(user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+async def get_weekly_demand(user: User = Depends(check_read("comunicacao")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(WeeklyDemand).where(WeeklyDemand.sector == "comunicacao"))
     demand = result.scalar_one_or_none()
     

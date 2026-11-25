@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func
 from core.database_sql import get_db
 from core.models_sql import User, Demand, FinanceTransaction, RegistryEntry, Ticket, Employee, Project, WeeklyDemand, BudgetCategory
-from core.security import get_current_user
+from core.security import get_current_user, user_can_read
 
 router = APIRouter()
 
@@ -48,9 +48,20 @@ async def generate_report(
     user: User = Depends(get_current_user),
     db_session: AsyncSession = Depends(get_db)
 ):
-    valid_types = ["demands", "finance", "registry", "ti", "employees", "communication"]
-    if type not in valid_types:
+    # Tipo de relatório -> módulo cujo acesso é exigido (None = todos os usuários)
+    report_modules = {
+        "demands": None,
+        "finance": "financeira",
+        "registry": "registro",
+        "ti": "ti",
+        "employees": "administrativa",
+        "communication": "comunicacao",
+    }
+    if type not in report_modules:
         raise HTTPException(status_code=400, detail="Invalid report type")
+    module = report_modules[type]
+    if module and not await user_can_read(user, module, db_session):
+        raise HTTPException(status_code=403, detail=f"Você não tem acesso ao módulo {module}")
 
     start_dt = parse_date(start)
     end_dt = parse_date(end)

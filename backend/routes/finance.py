@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
 from core.database_sql import get_db
 from core.models_sql import User, BudgetCategory, FinanceTransaction
-from core.security import get_current_user, check_permission
+from core.security import get_current_user, check_permission, check_read
 from core.limiter import limiter
 from fastapi import Request
 
@@ -60,7 +60,7 @@ def format_transaction(tx: FinanceTransaction, category: Optional[BudgetCategory
 # --- Budget Categories Routes ---
 @router.get("/budget-categories", status_code=status.HTTP_200_OK)
 @limiter.limit("60/minute")
-async def get_budget_categories(request: Request, user: User = Depends(check_permission("financeira", "read")), db_session: AsyncSession = Depends(get_db)):
+async def get_budget_categories(request: Request, user: User = Depends(check_read("financeira")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(BudgetCategory))
     categories = result.scalars().all()
     
@@ -93,7 +93,7 @@ async def update_budget_category(data: BudgetCategoryUpdate, user: User = Depend
 # --- Payments Routes ---
 @router.get("/payments", status_code=status.HTTP_200_OK)
 @limiter.limit("60/minute")
-async def get_payments(request: Request, page: int = 1, limit: int = 10, status_filter: Optional[str] = Query(None, alias="status"), user: User = Depends(check_permission("financeira", "read")), db_session: AsyncSession = Depends(get_db)):
+async def get_payments(request: Request, page: int = 1, limit: int = 10, status_filter: Optional[str] = Query(None, alias="status"), user: User = Depends(check_read("financeira")), db_session: AsyncSession = Depends(get_db)):
     skip = (page - 1) * limit
     
     # Filtros da tela "Contas Pagas": Emitido = possui comprovante anexado.

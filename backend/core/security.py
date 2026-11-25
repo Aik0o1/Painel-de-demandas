@@ -5,7 +5,7 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from core.database_sql import get_db
-from core.models_sql import User, UserStatus, Session
+from core.models_sql import User, UserStatus, Session, Sector
 
 SECRET_KEY = os.getenv("NEXTAUTH_SECRET")
 if not SECRET_KEY:
@@ -85,3 +85,33 @@ def check_permission(module: str, action: str):
         return user
         
     return permission_checker
+
+
+async def user_can_read(user: User, module: str, db_session: AsyncSession) -> bool:
+    """
+    Mesma regra do menu lateral (Sidebar.tsx): MASTER_ADMIN, usuário lotado no
+    setor do módulo ou com a permissão <módulo>.read.
+    """
+    if user.role == "MASTER_ADMIN":
+        return True
+    if (user.permissions or {}).get(module, {}).get("read"):
+        return True
+    if not user.sector_id:
+        return False
+    if user.sector_id == module:
+        return True
+    result = await db_session.execute(select(Sector.slug, Sector.name).where(Sector.id == user.sector_id))
+    row = result.first()
+    return bool(row and module in (row.slug, row.name))
+
+
+def check_read(module: str):
+    """Dependência para rotas de leitura de um setor. Ex.: Depends(check_read("ti"))."""
+    async def read_checker(
+        user: User = Depends(get_current_user),
+        db_session: AsyncSession = Depends(get_db),
+    ):
+        if not await user_can_read(user, module, db_session):
+            raise HTTPException(status_code=403, detail=f"Você não tem acesso ao módulo {module}")
+        return user
+    return read_checker

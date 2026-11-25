@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from core.database_sql import get_db
 from core.models_sql import User, RegistryEntry, RegistryReport
-from core.security import get_current_user, check_permission
+from core.security import get_current_user, check_permission, check_read
 from core.utils import parse_date
 
 router = APIRouter()
@@ -58,7 +58,7 @@ def format_registry_entry(item: RegistryEntry):
     }
 
 @router.get("", status_code=status.HTTP_200_OK)
-async def get_registry_items(user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
+async def get_registry_items(user: User = Depends(check_read("registro")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(RegistryEntry).order_by(RegistryEntry.createdAt.desc()))
     items = result.scalars().all()
     return [format_registry_entry(i) for i in items]
@@ -114,7 +114,7 @@ async def delete_registry_item(id: str, user: User = Depends(check_permission("r
 # --- Registry Stats ---
 
 @router.get("/stats", status_code=status.HTTP_200_OK)
-async def get_stats(type: Optional[str] = Query(None), month: Optional[int] = None, year: Optional[int] = None, date: Optional[str] = None, user: User = Depends(get_current_user)):
+async def get_stats(type: Optional[str] = Query(None), month: Optional[int] = None, year: Optional[int] = None, date: Optional[str] = None, user: User = Depends(check_read("registro"))):
     from core.couchdb_client import get_registro_db
     try:
         db = get_registro_db()
@@ -262,7 +262,7 @@ async def get_stats(type: Optional[str] = Query(None), month: Optional[int] = No
         raise HTTPException(status_code=500, detail=f"Erro ao consultar CouchDB: {str(e)}")
 
 @router.get("/report/pdf")
-async def get_pdf_report(month: Optional[int] = None, year: Optional[int] = None, user: User = Depends(get_current_user)):
+async def get_pdf_report(month: Optional[int] = None, year: Optional[int] = None, user: User = Depends(check_read("registro"))):
     from core.couchdb_client import get_registro_db
     import io
     from fastapi.responses import StreamingResponse
