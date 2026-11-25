@@ -11,6 +11,11 @@ export async function POST(req: Request) {
             return new NextResponse("Dados incompletos", { status: 400 });
         }
 
+        // Mesmo mínimo do formulário de cadastro (register/page.tsx)
+        if (typeof password !== "string" || password.length < 6) {
+            return new NextResponse("A senha deve ter pelo menos 6 caracteres", { status: 400 });
+        }
+
         // Check if email already exists
         const userExists = await prisma.user.findUnique({ where: { email } });
         if (userExists) {
