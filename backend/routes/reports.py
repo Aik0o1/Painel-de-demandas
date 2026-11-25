@@ -12,6 +12,25 @@ from core.security import get_current_user
 
 router = APIRouter()
 
+
+class SafeCsvWriter:
+    """csv.writer que neutraliza injeção de fórmulas (=, +, -, @) no Excel."""
+
+    def __init__(self, stream):
+        self._writer = csv.writer(stream, delimiter=';', quotechar='"', quoting=csv.QUOTE_ALL, doublequote=True)
+
+    @staticmethod
+    def _clean(value):
+        if value is None:
+            return ""
+        val_str = str(value)
+        if val_str and val_str[0] in ('=', '+', '-', '@', '\t', '\r', '\n'):
+            val_str = "'" + val_str
+        return val_str
+
+    def writerow(self, row):
+        self._writer.writerow([self._clean(v) for v in row])
+
 from core.utils import parse_date as _parse_date
 
 
@@ -41,22 +60,9 @@ async def generate_report(
     output = io.StringIO()
     # Add BOM for Excel compatibility with UTF-8
     output.write('\ufeff')
-    writer = csv.writer(output, delimiter=';', quotechar='"', quoting=csv.QUOTE_ALL, doublequote=True)
-
-    def clean_csv_value(value):
-        if value is None:
-            return ""
-        val_str = str(value)
-        # Prevent CSV Formula Injection
-        if val_str and val_str[0] in ('=', '+', '-', '@', '\t', '\r', '\n'):
-            val_str = "'" + val_str
-        return val_str
-
-    # Wrap writerow to automatically clean values
-    original_writerow = writer.writerow
-    def safe_writerow(row):
-        original_writerow([clean_csv_value(v) for v in row])
-    writer.writerow = safe_writerow
+    # csv.writer.writerow é somente leitura (não pode ser substituído); por isso
+    # o writer é envolvido para sanitizar todos os valores.
+    writer = SafeCsvWriter(output)
 
     if type == "demands":
         stmt = select(Demand).order_by(Demand.createdAt.desc())
