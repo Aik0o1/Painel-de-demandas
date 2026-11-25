@@ -5,7 +5,7 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from core.database_sql import get_db
-from core.models_sql import User
+from core.models_sql import User, UserStatus
 
 SECRET_KEY = os.getenv("NEXTAUTH_SECRET")
 if not SECRET_KEY:
@@ -19,34 +19,38 @@ async def get_current_user(
     request: Request,
     db_session: AsyncSession = Depends(get_db)
 ):
-    authorization = request.headers.get("authorization")
-    x_user_email = request.headers.get("x-user-email")
-    
-    email = None
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ")[1]
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            email = payload.get("email")
-        except Exception as e:
-            print(f"JWT Decode error: {e}")
-            # Se der erro no token, tentamos o header de email como fallback
-            if not x_user_email:
-                raise HTTPException(status_code=401, detail="Token inválido ou expirado")
-    
-    # Fallback para header customizado enviado pelo frontend (api.ts)
-    if not email and x_user_email:
-        email = x_user_email
-    
-    if not email:
+    """
+    Identifica o usuário pelo JWT (HS256, NEXTAUTH_SECRET) que o middleware do
+    Next.js anexa a cada chamada /api/*. Nenhum outro header é aceito como
+    identidade: o antigo fallback X-User-Email permitia se passar por qualquer
+    usuário sem senha.
+    """
+    authorization = request.headers.get("authorization") or ""
+    if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Sessão não identificada")
+
+    token = authorization.split(" ", 1)[1]
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Sessão expirada")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Token inválido")
+
+    email = payload.get("email")
+    if not email:
+        raise HTTPException(status_code=401, detail="Token inválido")
 
     result = await db_session.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
-    
+
     if not user:
-        raise HTTPException(status_code=404, detail="Usuário não encontrado")
-    
+        raise HTTPException(status_code=401, detail="Usuário não encontrado")
+
+    if user.status != UserStatus.ACTIVE:
+        raise HTTPException(status_code=403, detail="Usuário sem acesso ativo")
+
+    request.state.user_id = user.id
     return user
 
 def check_permission(module: str, action: str):

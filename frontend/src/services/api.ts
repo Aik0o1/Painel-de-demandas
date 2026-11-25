@@ -4,39 +4,13 @@ interface ApiRequestOptions extends RequestInit {
     responseType?: 'json' | 'text' | 'blob';
 }
 
-import { getSession } from 'next-auth/react';
-
-let sessionPromise: Promise<any> | null = null;
-let cachedEmail: string | null = null;
-let lastFetchTime = 0;
-
-const getHeaders = async (): Promise<HeadersInit> => {
-    const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-    };
-
-    const now = Date.now();
-
-    // Cache for 2 minutes to prevent spamming `/api/auth/session`
-    if (!cachedEmail || (now - lastFetchTime) > 120000) {
-        if (!sessionPromise) {
-            sessionPromise = getSession().then(session => {
-                cachedEmail = session?.user?.email || null;
-                lastFetchTime = Date.now();
-                sessionPromise = null; // reset fetching state
-                return cachedEmail;
-            });
-        }
-        await sessionPromise;
-    }
-
-    if (cachedEmail) {
-        headers['X-User-Email'] = cachedEmail;
-    }
-
-    return headers;
-};
+// A identidade do usuário é anexada pelo middleware do Next.js (src/middleware.ts),
+// que lê o cookie de sessão e envia um JWT assinado ao backend. O navegador não
+// envia nenhum header de identidade.
+const getHeaders = async (): Promise<HeadersInit> => ({
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+});
 
 import { toast } from 'sonner';
 
@@ -46,6 +20,10 @@ const handleResponse = async (response: Response, responseType?: string) => {
             window.dispatchEvent(new Event('auth:logout'));
         }
         throw new Error('Sessão expirada. Faça login novamente.');
+    }
+
+    if (response.status === 429) {
+        throw new Error('Muitas requisições em pouco tempo. Aguarde alguns segundos e tente novamente.');
     }
 
     if (!response.ok) {
@@ -74,10 +52,12 @@ const apiRequest = async (endpoint: string, method: string, options: ApiRequestO
     const baseHeaders = await getHeaders();
     const headers = { ...baseHeaders, ...customConfig.headers };
 
+    // `headers` vem depois do spread para que os headers mesclados não sejam
+    // sobrescritos por customConfig.headers.
     const config: RequestInit = {
+        ...customConfig,
         method,
         headers,
-        ...customConfig,
     };
 
     if (data) {
