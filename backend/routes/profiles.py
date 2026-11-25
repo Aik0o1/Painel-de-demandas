@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Header, Depends, File, UploadFile
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy.exc import IntegrityError
 from typing import Optional, List, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
@@ -68,12 +69,16 @@ async def update_profile(updates: ProfileUpdate, user: User = Depends(get_curren
     if "image" in update_data:
         user.image = update_data["image"]
 
-    await db_session.commit()
+    try:
+        await db_session.commit()
+    except IntegrityError:
+        await db_session.rollback()
+        raise HTTPException(status_code=400, detail="Este CPF já está cadastrado para outro usuário.")
     return {"success": True}
 
 class ChangePasswordRequest(BaseModel):
     currentPassword: str
-    newPassword: str
+    newPassword: str = Field(..., min_length=6)
 
 @router.post("/change-password")
 async def change_password(
