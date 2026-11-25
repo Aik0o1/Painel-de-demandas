@@ -12,8 +12,9 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { apiGet } from "@/services/api";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
-export default function AdminUsersPage() {
+function AdminUsersPageContent() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [isApprovalOpen, setIsApprovalOpen] = useState(false);
@@ -119,5 +120,14 @@ export default function AdminUsersPage() {
                 onClose={() => setIsApprovalOpen(false)}
             />
         </div>
+    );
+}
+
+// Mesma regra da página /admin e do menu: MASTER_ADMIN ou permissão admin.read.
+export default function AdminUsersPage() {
+    return (
+        <RoleGuard allowedRoles={['MASTER_ADMIN']} readPermission="admin">
+            <AdminUsersPageContent />
+        </RoleGuard>
     );
 }

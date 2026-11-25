@@ -11,9 +11,15 @@ interface RoleGuardProps {
     children: React.ReactNode;
     allowedRoles?: string[];
     allowedSectorSlugs?: string[];
+    /**
+     * Módulo cuja permissão de leitura também libera a página, mesmo sem o
+     * papel exigido em allowedRoles (ex.: "admin" -> permissions.admin.read).
+     * Mesma regra do menu lateral.
+     */
+    readPermission?: string;
 }
 
-export function RoleGuard({ children, allowedRoles, allowedSectorSlugs }: RoleGuardProps) {
+export function RoleGuard({ children, allowedRoles, allowedSectorSlugs, readPermission }: RoleGuardProps) {
     const { status } = useSession();
     const { profile, isLoading: isProfileLoading } = useCurrentProfile();
     const { sectors, isLoading: isSectorsLoading } = useSectors();
@@ -40,7 +46,10 @@ export function RoleGuard({ children, allowedRoles, allowedSectorSlugs }: RoleGu
         let hasSectorAccess = true;
 
         if (allowedRoles && allowedRoles.length > 0) {
-            hasRoleAccess = allowedRoles.includes(profile.role);
+            hasRoleAccess = allowedRoles.includes(profile.role) ||
+                (!!readPermission && !!profile.permissions?.[readPermission]?.read);
+        } else if (readPermission) {
+            hasRoleAccess = !!profile.permissions?.[readPermission]?.read;
         }
 
         if (allowedSectorSlugs && allowedSectorSlugs.length > 0) {
@@ -61,7 +70,7 @@ export function RoleGuard({ children, allowedRoles, allowedSectorSlugs }: RoleGu
         if (!(hasRoleAccess && hasSectorAccess)) {
             // Optional: router.push('/dashboard');
         }
-    }, [status, profile, isProfileLoading, sectors, isSectorsLoading, allowedRoles, allowedSectorSlugs, router]);
+    }, [status, profile, isProfileLoading, sectors, isSectorsLoading, allowedRoles, allowedSectorSlugs, readPermission, router]);
 
     if (status === "loading" || isProfileLoading || isSectorsLoading || isAuthorized === null) {
         return (

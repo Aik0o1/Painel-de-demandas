@@ -13,7 +13,7 @@ export default function AdminPage() {
     const [activeTab, setActiveTab] = useState<'users' | 'sessions' | 'audit' | 'reports'>('users');
 
     return (
-        <RoleGuard allowedRoles={['MASTER_ADMIN']}>
+        <RoleGuard allowedRoles={['MASTER_ADMIN']} readPermission="admin">
             <DashboardLayout>
                 <div className="min-h-screen relative pb-32">
                     {/* Global Header */}
