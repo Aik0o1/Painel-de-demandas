@@ -31,7 +31,7 @@ async def init_db():
                 {"name": "TI", "slug": "ti"},
                 {"name": "Comunicacao", "slug": "comunicacao"},
                 {"name": "Financeiro", "slug": "financeira"},
-                {"name": "Administrativo", "slug": "administrativo"},
+                {"name": "Administrativo", "slug": "administrativa"},
                 {"name": "Procuradoria", "slug": "procuradoria"},
                 {"name": "Registro", "slug": "registro"},
                 {"name": "Presidencia", "slug": "presidencia"}
