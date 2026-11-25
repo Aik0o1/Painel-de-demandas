@@ -8,14 +8,22 @@ from sqlalchemy import select, update, delete
 from core.database_sql import get_db
 from core.models_sql import User, RegistryEntry, RegistryReport
 from core.security import get_current_user, check_permission
+from core.utils import parse_date
 
 router = APIRouter()
+
+
+def _parse_deadline(value: Optional[str]) -> Optional[datetime]:
+    try:
+        return parse_date(value)
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Data inválida: {value}")
 
 class RegistryItemCreate(BaseModel):
     protocol_number: str
     document_type: str
     party_name: str
-    deadline_date: Optional[datetime] = None
+    deadline_date: Optional[str] = None
     status: str = "PENDING"
     notes: Optional[str] = None
 
@@ -23,7 +31,7 @@ class RegistryItemUpdate(BaseModel):
     protocol_number: Optional[str] = None
     document_type: Optional[str] = None
     party_name: Optional[str] = None
-    deadline_date: Optional[datetime] = None
+    deadline_date: Optional[str] = None
     status: Optional[str] = None
     notes: Optional[str] = None
 
@@ -63,7 +71,7 @@ async def create_registry_item(item: RegistryItemCreate, user: User = Depends(ch
         protocolNumber=item.protocol_number,
         documentType=item.document_type,
         partyName=item.party_name,
-        deadlineDate=item.deadline_date,
+        deadlineDate=_parse_deadline(item.deadline_date),
         status=item.status,
         notes=item.notes,
         createdAt=now,
@@ -86,7 +94,7 @@ async def update_registry_item(id: str, update_data: RegistryItemUpdate, user: U
     if "protocol_number" in data: item.protocolNumber = data["protocol_number"]
     if "document_type" in data: item.documentType = data["document_type"]
     if "party_name" in data: item.partyName = data["party_name"]
-    if "deadline_date" in data: item.deadlineDate = data["deadline_date"]
+    if "deadline_date" in data: item.deadlineDate = _parse_deadline(data["deadline_date"])
     if "status" in data: item.status = data["status"]
     if "notes" in data: item.notes = data["notes"]
     
