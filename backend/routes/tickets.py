@@ -182,32 +182,31 @@ async def update_ticket(
         
     now = datetime.utcnow()
     
-    # Atualiza Status
+    # Atualiza Status (OPEN -> IN_PROGRESS <-> PAUSED -> RESOLVED)
     if update_data.status:
         new_status = update_data.status
-        
-        if new_status == 'IN_PROGRESS':
-            if ticket.status in ['OPEN', 'PAUSED']:
-                ticket.status = 'IN_PROGRESS'
-                ticket.lastStartedAt = now
-                ticket.pauseReason = "" 
-                
-        elif new_status == 'PAUSED':
+        if new_status == 'IN_PROGRESS' and ticket.status in ['OPEN', 'PAUSED']:
+            ticket.status = 'IN_PROGRESS'
+            ticket.lastStartedAt = now
+            ticket.pauseReason = ""
+        elif new_status == 'PAUSED' and ticket.status == 'IN_PROGRESS':
+            if ticket.lastStartedAt:
+                ticket.accumulatedTimeMs += int((now - ticket.lastStartedAt).total_seconds() * 1000)
+            ticket.status = 'PAUSED'
+            ticket.lastStartedAt = None
+            ticket.pauseReason = update_data.pause_reason or "Pausa solicitada sem motivo."
+        elif new_status == 'RESOLVED' and ticket.status != 'RESOLVED':
             if ticket.status == 'IN_PROGRESS' and ticket.lastStartedAt:
-                diff = int((now - ticket.lastStartedAt).total_seconds() * 1000)
-                ticket.accumulatedTimeMs += diff
-                ticket.status = 'PAUSED'
-                ticket.lastStartedAt = None
-                ticket.pauseReason = update_data.pause_reason or "Pausa solicitada sem motivo."
-                
-        elif new_status == 'RESOLVED':
-            if ticket.status == 'IN_PROGRESS' and ticket.lastStartedAt:
-                diff = int((now - ticket.lastStartedAt).total_seconds() * 1000)
-                ticket.accumulatedTimeMs += diff
-                
+                ticket.accumulatedTimeMs += int((now - ticket.lastStartedAt).total_seconds() * 1000)
             ticket.status = 'RESOLVED'
             ticket.lastStartedAt = None
             ticket.resolvedAt = now
+        elif new_status != ticket.status:
+            # Antes a transição era ignorada e o frontend exibia "Status atualizado!"
+            raise HTTPException(
+                status_code=400,
+                detail=f"Não é possível mudar o chamado de {ticket.status} para {new_status}.",
+            )
 
     # Atualiza Responsável
     if update_data.assigned_to_ids is not None:
