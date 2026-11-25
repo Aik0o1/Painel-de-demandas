@@ -24,7 +24,18 @@ class NormalizeTrailingSlashMiddleware(BaseHTTPMiddleware):
             scope["raw_path"] = scope["path"].encode("utf-8")
         return await call_next(request)
 
+from contextlib import asynccontextmanager
+from core.migrations import run_migrations
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await run_migrations()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Demand Navigator API",
     description="API em FastAPI servindo os mesmos dados do portal NextJS",
     version="1.0.0"
