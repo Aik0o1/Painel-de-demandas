@@ -32,7 +32,13 @@ const handleResponse = async (response: Response, responseType?: string) => {
         const data = isJson ? await response.json() : await response.text();
         
         // FastAPI usa 'detail', outros podem usar 'message' ou 'error'
-        const error = (data && (data.detail || data.message || data.error)) || response.statusText;
+        let error = (data && (data.detail || data.message || data.error)) || response.statusText;
+        // Erros de validação do FastAPI (422) vêm como lista de objetos.
+        if (Array.isArray(error)) {
+            error = error.map((e: any) => e?.msg || JSON.stringify(e)).join('; ');
+        } else if (typeof error === 'object') {
+            error = JSON.stringify(error);
+        }
         throw new Error(error);
     }
 
