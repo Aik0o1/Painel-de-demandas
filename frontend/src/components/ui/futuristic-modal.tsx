@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { DialogContent, DialogClose } from "@/components/ui/dialog";
+import { DialogContent, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,13 +10,17 @@ interface FuturisticModalProps {
     className?: string;
 }
 
+// Textura de ruído embutida (antes vinha de grainy-gradients.vercel.app, que
+// passou a responder 402 e gerava erro no console a cada modal aberto).
+const NOISE_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E";
+
 export function FuturisticModal({ children, title, className }: FuturisticModalProps) {
     return (
         <DialogContent className={cn("max-w-md w-full p-0 border-0 bg-transparent shadow-none sm:max-w-md overflow-hidden font-body", className)}>
             <div className="relative w-full">
                 {/* Animated Background Blobs (Contained within Modal) */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl z-0">
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 dark:opacity-5 mix-blend-overlay"></div>
+                    <div className="absolute inset-0 opacity-20 dark:opacity-5 mix-blend-overlay" style={{ backgroundImage: `url("${NOISE_SVG}")` }}></div>
                     <div className="absolute -top-20 -left-20 w-64 h-64 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 dark:opacity-20 animate-blob"></div>
                     <div className="absolute top-1/2 -right-10 w-56 h-56 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 dark:opacity-10 animate-blob animation-delay-2000"></div>
                     <div className="absolute -bottom-20 left-10 w-64 h-64 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 dark:opacity-20 animate-blob animation-delay-4000"></div>
@@ -25,9 +29,9 @@ export function FuturisticModal({ children, title, className }: FuturisticModalP
                 <div className="relative z-10 glass-panel w-full rounded-2xl p-6 md:p-8 transition-all duration-300">
 
                     <div className="flex justify-between items-start mb-8">
-                        <div className="text-xl md:text-2xl font-display font-bold text-gray-900 dark:text-foreground tracking-wide">
+                        <DialogTitle className="text-xl md:text-2xl font-display font-bold text-gray-900 dark:text-foreground tracking-wide">
                             {title}
-                        </div>
+                        </DialogTitle>
                         <DialogClose className="rounded-full p-1 hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-gray-500 dark:text-muted-foreground">
                             <X className="w-6 h-6" />
                             <span className="sr-only">Close</span>
