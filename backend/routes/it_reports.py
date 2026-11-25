@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 from core.database_sql import get_db
 from core.models_sql import User, ItReport, ItReportDirectory
-from core.security import get_current_user
+from core.security import get_current_user, check_read
 import uuid
 import os
 import shutil
@@ -96,7 +96,7 @@ def human_readable_size(size_bytes: int) -> str:
 # ────────────────────────── Directory Routes ──────────────────────────
 
 @router.get("/directories", status_code=status.HTTP_200_OK)
-async def list_directories(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def list_directories(user: User = Depends(check_read("ti")), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(ItReportDirectory).order_by(ItReportDirectory.name))
     dirs = result.scalars().all()
 
@@ -116,7 +116,7 @@ async def list_directories(user: User = Depends(get_current_user), db: AsyncSess
 @router.post("/directories", status_code=status.HTTP_201_CREATED)
 async def create_directory(
     body: DirectoryCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_read("ti")),
     db: AsyncSession = Depends(get_db)
 ):
     now = datetime.utcnow()
@@ -137,7 +137,7 @@ async def create_directory(
 @router.delete("/directories/{dir_id}", status_code=status.HTTP_200_OK)
 async def delete_directory(
     dir_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_read("ti")),
     db: AsyncSession = Depends(get_db)
 ):
     # Delete files on disk first
@@ -162,7 +162,7 @@ async def delete_directory(
 async def list_files(
     directoryId: Optional[str] = None,
     search: Optional[str] = None,
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_read("ti")),
     db: AsyncSession = Depends(get_db)
 ):
     query = select(ItReport)
@@ -187,7 +187,7 @@ async def list_files(
 async def upload_file(
     file: UploadFile = File(...),
     directoryId: Optional[str] = Form(None),
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_read("ti")),
     db: AsyncSession = Depends(get_db)
 ):
     now = datetime.utcnow()
@@ -232,7 +232,7 @@ async def upload_file(
 async def generate_command_report(
     body: ReportGenerate,
     request: Request,
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_read("ti")),
     db: AsyncSession = Depends(get_db)
 ):
     # SECURITY FIX: Remove comandos sensíveis (dmesg, who, top) e limita a comandos seguros
@@ -324,7 +324,7 @@ async def generate_command_report(
 @router.get("/files/{file_id}/download")
 async def download_file(
     file_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_read("ti")),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(ItReport).where(ItReport.id == file_id))
@@ -346,7 +346,7 @@ async def download_file(
 @router.delete("/files/{file_id}", status_code=status.HTTP_200_OK)
 async def delete_file(
     file_id: str,
-    user: User = Depends(get_current_user),
+    user: User = Depends(check_read("ti")),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(ItReport).where(ItReport.id == file_id))
