@@ -4,6 +4,7 @@ from typing import Optional, List
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
+from sqlalchemy.exc import IntegrityError
 from core.database_sql import get_db
 from core.models_sql import User, Process
 from core.security import get_current_user, check_permission
@@ -74,7 +75,11 @@ async def create_process(process: ProcessCreate, user: User = Depends(check_perm
         updatedAt=now,
     )
     db_session.add(new_process)
-    await db_session.commit()
+    try:
+        await db_session.commit()
+    except IntegrityError:
+        await db_session.rollback()
+        raise HTTPException(status_code=400, detail="Já existe um processo com este número.")
     await db_session.refresh(new_process)
     return format_process(new_process)
 
@@ -96,7 +101,12 @@ async def update_process(id: str, update_data: ProcessUpdate, user: User = Depen
     if "description" in data: process.description = data["description"]
     
     process.updatedAt = datetime.utcnow()
-    await db_session.commit()
+
+    try:
+        await db_session.commit()
+    except IntegrityError:
+        await db_session.rollback()
+        raise HTTPException(status_code=400, detail="Já existe um processo com este número.")
     await db_session.refresh(process)
     return format_process(process)
 
