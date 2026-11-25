@@ -167,6 +167,7 @@ class InventoryItem(Base):
     category: Mapped[str] = mapped_column(String(100))
     location: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="GOOD")
+    value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)  # valor estimado (R$)
     
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updatedAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ class InventoryCreate(BaseModel):
     category: str
     location: Optional[str] = None
     status: str = "GOOD"
+    value: Optional[float] = Field(None, ge=0)
 
 class InventoryUpdate(BaseModel):
     code: Optional[str] = None
@@ -25,6 +26,7 @@ class InventoryUpdate(BaseModel):
     category: Optional[str] = None
     location: Optional[str] = None
     status: Optional[str] = None
+    value: Optional[float] = Field(None, ge=0)
 
 def format_item(item: InventoryItem):
     return {
@@ -34,6 +36,7 @@ def format_item(item: InventoryItem):
         "category": item.category,
         "location": item.location,
         "status": item.status,
+        "value": item.value,
         "createdAt": item.createdAt.isoformat() if item.createdAt else None,
         "updatedAt": item.updatedAt.isoformat() if item.updatedAt else None
     }
@@ -54,6 +57,7 @@ async def create_inventory(item: InventoryCreate, user: User = Depends(check_per
         category=item.category,
         location=item.location,
         status=item.status,
+        value=item.value,
         createdAt=now,
         updatedAt=now
     )
@@ -81,6 +85,7 @@ async def update_inventory(id: str, update_data: InventoryUpdate, user: User = D
     if "category" in data: item.category = data["category"]
     if "location" in data: item.location = data["location"]
     if "status" in data: item.status = data["status"]
+    if "value" in data: item.value = data["value"]
     
     item.updatedAt = datetime.utcnow()
 

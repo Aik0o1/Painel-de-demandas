@@ -31,6 +31,7 @@ export function InventoryDialog({ open, onOpenChange, item, onSave }: InventoryD
             setValue("category", item.category);
             setValue("location", item.location);
             setValue("status", item.status);
+            setValue("value", item.value ?? "");
         } else {
             reset();
             setValue("status", "GOOD");
@@ -41,7 +42,9 @@ export function InventoryDialog({ open, onOpenChange, item, onSave }: InventoryD
     }, [item, setValue, reset, register]);
 
     const onSubmit = async (data: any) => {
-        await onSave({ ...item, ...data });
+        // input numérico vazio chega como "" — o backend espera número ou null
+        const value = data.value === "" || data.value == null ? null : Number(data.value);
+        await onSave({ ...item, ...data, value });
         onOpenChange(false);
         reset();
     };
@@ -94,6 +97,13 @@ export function InventoryDialog({ open, onOpenChange, item, onSave }: InventoryD
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
+                        <FuturisticInput
+                            label="Valor Estimado (R$)"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            {...register("value")}
+                        />
                         <FuturisticSelect
                             label="Estado de Conservação"
                             value={statusValue}

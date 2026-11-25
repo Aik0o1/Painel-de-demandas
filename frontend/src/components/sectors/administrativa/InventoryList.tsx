@@ -1,3 +1,4 @@
+import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
 import {
     Table,
@@ -101,6 +102,7 @@ export function InventoryList() {
                             <TableHead>Nome</TableHead>
                             <TableHead>Categoria</TableHead>
                             <TableHead>Local</TableHead>
+                            <TableHead className="text-right">Valor</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
@@ -108,7 +110,7 @@ export function InventoryList() {
                     <TableBody>
                         {items.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                                     Nenhum item cadastrado.
                                 </TableCell>
                             </TableRow>
@@ -122,6 +124,7 @@ export function InventoryList() {
                                     </TableCell>
                                     <TableCell>{item.category}</TableCell>
                                     <TableCell>{item.location}</TableCell>
+                                    <TableCell className="text-right">{item.value != null ? formatCurrency(item.value) : "—"}</TableCell>
                                     <TableCell>
                                         <Badge variant={getStatusVariant(item.status) as any}>
                                             {getStatusLabel(item.status)}

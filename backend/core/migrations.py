@@ -15,7 +15,10 @@ from core.database_sql import engine, Base
 logger = logging.getLogger(__name__)
 
 # Comandos SQL aplicados em ordem. Só acrescente itens idempotentes.
-STATEMENTS: list = []
+STATEMENTS = [
+    # Valor estimado do patrimônio (formulário do inventário)
+    'ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS "value" DOUBLE PRECISION',
+]
 
 # Tabelas novas criadas se ainda não existirem.
 NEW_TABLES: list = []

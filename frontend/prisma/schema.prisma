@@ -137,6 +137,7 @@ model inventory_items {
   category  String   @db.VarChar(100)
   location  String?  @db.VarChar(255)
   status    String   @db.VarChar(20)
+  value     Float?
   createdAt DateTime @db.Timestamp(6)
   updatedAt DateTime @db.Timestamp(6)
 }
