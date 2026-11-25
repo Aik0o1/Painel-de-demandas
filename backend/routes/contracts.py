@@ -15,18 +15,17 @@ import uuid
 
 router = APIRouter()
 
-UPLOAD_DIR = "uploads/contracts"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+from core.utils import parse_date as _parse_date
+
 
 def parse_date(v: Optional[str]) -> Optional[datetime]:
-    if not v:
-        return None
     try:
-        if "T" in v:
-            return datetime.fromisoformat(v.replace("Z", "+00:00"))
-        return datetime.strptime(v, "%Y-%m-%d")
-    except (ValueError, TypeError):
+        return _parse_date(v)
+    except ValueError:
         return None
+
+UPLOAD_DIR = "uploads/contracts"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 class ContractCreate(BaseModel):
     title: str

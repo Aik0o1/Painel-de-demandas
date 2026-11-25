@@ -12,14 +12,13 @@ from core.security import get_current_user
 
 router = APIRouter()
 
+from core.utils import parse_date as _parse_date
+
+
 def parse_date(v: Optional[str]) -> Optional[datetime]:
-    if not v:
-        return None
     try:
-        if "T" in v:
-            return datetime.fromisoformat(v.replace("Z", "+00:00"))
-        return datetime.strptime(v, "%Y-%m-%d")
-    except (ValueError, TypeError):
+        return _parse_date(v)
+    except ValueError:
         return None
 
 @router.get("")

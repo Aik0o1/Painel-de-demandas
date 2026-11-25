@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Query, File, UploadFile, Form, Depends
+from core.utils import parse_date
 from core.upload_utils import validate_upload_file
 from pydantic import BaseModel
 from typing import Optional, List
@@ -141,10 +142,7 @@ async def create_payment(
     db_session: AsyncSession = Depends(get_db)
 ):
     try:
-        if "T" in date:
-            parsed_date = datetime.fromisoformat(date.replace("Z", "+00:00"))
-        else:
-            parsed_date = datetime.strptime(date, "%Y-%m-%d")
+        parsed_date = parse_date(date)
     except ValueError:
         raise HTTPException(status_code=400, detail="Data inválida")
 
@@ -218,12 +216,9 @@ async def update_payment(
     if amount is not None: tx.amount = amount
     if date is not None:
         try:
-            if "T" in date:
-                tx.date = datetime.fromisoformat(date.replace("Z", "+00:00"))
-            else:
-                tx.date = datetime.strptime(date, "%Y-%m-%d")
+            tx.date = parse_date(date) or tx.date
         except ValueError:
-            pass
+            raise HTTPException(status_code=400, detail="Data inválida")
             
     if supplier is not None: tx.supplier = supplier
     if category_id is not None: tx.categoryId = category_id

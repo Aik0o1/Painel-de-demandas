@@ -12,21 +12,17 @@ import uuid
 
 router = APIRouter()
 
-Priority = Literal["low", "medium", "high", "critical"]
-Status = Literal["pending", "in_progress", "completed"]
+from core.utils import parse_date as _parse_date
 
 
 def parse_date(value: Optional[str]) -> Optional[datetime]:
-    """Converte ISO 8601 (com ou sem 'Z') para datetime naive em UTC."""
-    if not value:
-        return None
     try:
-        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return _parse_date(value)
     except ValueError:
         raise HTTPException(status_code=422, detail=f"Data inválida: {value}")
-    if dt.tzinfo is not None:
-        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
-    return dt
+
+Priority = Literal["low", "medium", "high", "critical"]
+Status = Literal["pending", "in_progress", "completed"]
 
 
 class DemandCreate(BaseModel):
