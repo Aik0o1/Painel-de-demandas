@@ -296,7 +296,7 @@ async def get_pdf_report(month: Optional[int] = None, year: Optional[int] = None
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/manual-entry", status_code=status.HTTP_201_CREATED)
-async def save_manual_entry(payload: ReportPayload, db_session: AsyncSession = Depends(get_db)):
+async def save_manual_entry(payload: ReportPayload, user: User = Depends(check_permission("registro", "create")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(
         select(RegistryReport).where(RegistryReport.month == payload.month, RegistryReport.year == payload.year)
     )
