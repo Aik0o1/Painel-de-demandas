@@ -55,7 +55,7 @@ def format_transaction(tx: FinanceTransaction, category: Optional[BudgetCategory
 
 # --- Budget Categories Routes ---
 @router.get("/budget-categories", status_code=status.HTTP_200_OK)
-@limiter.limit("20/minute")
+@limiter.limit("60/minute")
 async def get_budget_categories(request: Request, user: User = Depends(check_permission("financeira", "read")), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(BudgetCategory))
     categories = result.scalars().all()
@@ -88,7 +88,7 @@ async def update_budget_category(data: BudgetCategoryUpdate, user: User = Depend
 
 # --- Payments Routes ---
 @router.get("/payments", status_code=status.HTTP_200_OK)
-@limiter.limit("20/minute")
+@limiter.limit("60/minute")
 async def get_payments(request: Request, page: int = 1, limit: int = 10, status_filter: Optional[str] = Query(None, alias="status"), user: User = Depends(check_permission("financeira", "read")), db_session: AsyncSession = Depends(get_db)):
     skip = (page - 1) * limit
     

@@ -33,12 +33,12 @@ def format_profile(user: User):
     }
 
 @router.get("/me", status_code=status.HTTP_200_OK)
-@limiter.limit("20/minute")
+@limiter.limit("120/minute")
 async def get_my_profile(request: Request, user: User = Depends(get_current_user)):
     return format_profile(user)
 
 @router.get("", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
+@limiter.limit("60/minute")
 async def list_profiles(request: Request, user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
     result = await db_session.execute(select(User).order_by(User.name))
     users = result.scalars().all()

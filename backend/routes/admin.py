@@ -33,7 +33,7 @@ class ResetPasswordRequest(BaseModel):
     newPassword: str = Field(..., min_length=6)
 
 @router.get("/users", status_code=status.HTTP_200_OK)
-@limiter.limit("10/minute")
+@limiter.limit("60/minute")
 async def list_users(request: Request, user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
     # Limita a Master Admin ou usuários com permissão de leitura de admin
     if user.role != "MASTER_ADMIN" and not (user.permissions or {}).get("admin", {}).get("read"):
