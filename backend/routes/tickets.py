@@ -155,11 +155,13 @@ async def create_ticket(
         updatedAt=now
     )
     
-    db_session.add(new_ticket)
-    
+    # Os responsáveis precisam ser definidos antes do add(): a consulta abaixo
+    # faz autoflush do chamado e, já persistido, atribuir a coleção exigiria
+    # carregá-la de forma síncrona (MissingGreenlet -> 500).
     if ticket.assigned_to_ids:
         users_result = await db_session.execute(select(User).where(User.id.in_(ticket.assigned_to_ids)))
         new_ticket.assignedUsers = list(users_result.scalars().all())
+    db_session.add(new_ticket)
         
     await db_session.commit()
     await db_session.refresh(new_ticket, ['assignedTo', 'assignedUsers'])
