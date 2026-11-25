@@ -31,7 +31,6 @@ export function InventoryDialog({ open, onOpenChange, item, onSave }: InventoryD
             setValue("category", item.category);
             setValue("location", item.location);
             setValue("status", item.status);
-            setValue("value", item.value);
         } else {
             reset();
             setValue("status", "GOOD");
@@ -95,12 +94,6 @@ export function InventoryDialog({ open, onOpenChange, item, onSave }: InventoryD
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <FuturisticInput
-                            label="Valor Estimado (R$)"
-                            type="number"
-                            step="0.01"
-                            {...register("value")}
-                        />
                         <FuturisticSelect
                             label="Estado de Conservação"
                             value={statusValue}

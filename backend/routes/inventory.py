@@ -4,6 +4,7 @@ from typing import Optional, List
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
+from sqlalchemy.exc import IntegrityError
 from core.database_sql import get_db
 from core.models_sql import User, InventoryItem
 from core.security import get_current_user, check_permission
@@ -62,9 +63,9 @@ async def create_inventory(item: InventoryCreate, user: User = Depends(check_per
         await db_session.commit()
         await db_session.refresh(new_item)
         return format_item(new_item)
-    except Exception as e:
+    except IntegrityError:
         await db_session.rollback()
-        raise HTTPException(status_code=400, detail=f"Erro ao criar item (código duplicado?): {str(e)}")
+        raise HTTPException(status_code=400, detail="Já existe um item com este código de patrimônio.")
 
 @router.put("/{id}", status_code=status.HTTP_200_OK)
 async def update_inventory(id: str, update_data: InventoryUpdate, user: User = Depends(check_permission("administrativa", "update")), db_session: AsyncSession = Depends(get_db)):
@@ -82,8 +83,12 @@ async def update_inventory(id: str, update_data: InventoryUpdate, user: User = D
     if "status" in data: item.status = data["status"]
     
     item.updatedAt = datetime.utcnow()
-    
-    await db_session.commit()
+
+    try:
+        await db_session.commit()
+    except IntegrityError:
+        await db_session.rollback()
+        raise HTTPException(status_code=400, detail="Já existe um item com este código de patrimônio.")
     await db_session.refresh(item)
     return format_item(item)
 
