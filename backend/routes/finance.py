@@ -18,6 +18,9 @@ from fastapi import Request
 
 router = APIRouter()
 
+# Servido por routes/uploads.py em /api/uploads/documents/<arquivo>
+PAYMENT_UPLOAD_DIR = os.path.join("uploads", "documents")
+
 # --- Pydantic Models ---
 class BudgetCategoryUpdate(BaseModel):
     id: str
@@ -149,13 +152,13 @@ async def create_payment(
     attachment_url = ""
     if file and file.filename:
         await validate_upload_file(file)
-        os.makedirs("uploads", exist_ok=True)
+        os.makedirs(PAYMENT_UPLOAD_DIR, exist_ok=True)
         ext = os.path.splitext(file.filename)[1]
         safe_filename = f"{uuid.uuid4()}{ext}"
-        file_path = os.path.join("uploads", safe_filename)
+        file_path = os.path.join(PAYMENT_UPLOAD_DIR, safe_filename)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        attachment_url = f"/api/uploads/{safe_filename}"
+        attachment_url = f"/api/uploads/documents/{safe_filename}"
         
     parsed_beneficiaries = None
     if beneficiaries:
@@ -227,10 +230,11 @@ async def update_payment(
         await validate_upload_file(file)
         ext = os.path.splitext(file.filename)[1]
         safe_filename = f"{uuid.uuid4()}{ext}"
-        file_path = os.path.join("uploads", safe_filename)
+        os.makedirs(PAYMENT_UPLOAD_DIR, exist_ok=True)
+        file_path = os.path.join(PAYMENT_UPLOAD_DIR, safe_filename)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        tx.attachmentUrl = f"/api/uploads/{safe_filename}"
+        tx.attachmentUrl = f"/api/uploads/documents/{safe_filename}"
         
     if beneficiaries is not None:
         try:
