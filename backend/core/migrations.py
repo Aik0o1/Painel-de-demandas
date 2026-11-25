@@ -11,6 +11,7 @@ import logging
 from sqlalchemy import text
 
 from core.database_sql import engine, Base
+from core.models_sql import Notification
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,9 @@ STATEMENTS = [
 ]
 
 # Tabelas novas criadas se ainda não existirem.
-NEW_TABLES: list = []
+NEW_TABLES: list = [
+    Notification,  # sino de notificações
+]
 
 
 async def run_migrations() -> None:

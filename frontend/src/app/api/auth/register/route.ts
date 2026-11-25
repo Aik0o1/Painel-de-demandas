@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { randomUUID } from "crypto";
 
 export async function POST(req: Request) {
     try {
@@ -75,6 +76,34 @@ export async function POST(req: Request) {
             });
         } catch (auditError) {
             console.error("Falha ao criar log de auditoria:", auditError);
+        }
+
+        // Avisa quem pode aprovar cadastros (sino de notificações)
+        try {
+            const approvers = await prisma.user.findMany({
+                where: {
+                    status: 'ACTIVE',
+                    OR: [
+                        { role: 'MASTER_ADMIN' },
+                        { permissions: { path: ['admin', 'update'], equals: true } },
+                    ],
+                },
+                select: { id: true },
+            });
+            if (approvers.length > 0) {
+                await prisma.notification.createMany({
+                    data: approvers.map((a) => ({
+                        id: randomUUID(),
+                        userId: a.id,
+                        title: 'Novo cadastro aguardando aprovação',
+                        message: `${newUser.name} (${newUser.email}) solicitou acesso ao sistema.`,
+                        type: 'WARNING',
+                        link: '/admin/users',
+                    })),
+                });
+            }
+        } catch (notifyError) {
+            console.error("Falha ao notificar administradores:", notifyError);
         }
 
         return NextResponse.json({

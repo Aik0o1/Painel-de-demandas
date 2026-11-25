@@ -20,6 +20,7 @@ import { AuthProvider as LegacyAuthProvider } from "@/contexts/AuthContext";
 // ... existing imports
 
 import { QueryProvider } from "@/components/providers/query-provider";
+import { NotificationsProvider } from "@/hooks/useNotifications";
 
 // ... existing imports
 
@@ -37,10 +38,12 @@ export default function RootLayout({
                 <QueryProvider>
                     <AuthProvider>
                         <LegacyAuthProvider>
-                            <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
-                                {children}
-                                <Toaster />
-                            </ThemeProvider>
+                            <NotificationsProvider>
+                                <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+                                    {children}
+                                    <Toaster />
+                                </ThemeProvider>
+                            </NotificationsProvider>
                         </LegacyAuthProvider>
                     </AuthProvider>
                 </QueryProvider>

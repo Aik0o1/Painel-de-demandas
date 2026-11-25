@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload
 from core.database_sql import get_db
 from core.models_sql import User, Ticket, Sector, UserStatus
 from core.security import get_current_user, check_permission, check_read
+from core.notifications import notify
 import uuid
 import logging
 
@@ -162,6 +163,15 @@ async def create_ticket(
         users_result = await db_session.execute(select(User).where(User.id.in_(ticket.assigned_to_ids)))
         new_ticket.assignedUsers = list(users_result.scalars().all())
     db_session.add(new_ticket)
+
+    notify(
+        db_session,
+        [u.id for u in new_ticket.assignedUsers or []] + [ticket.assigned_to_id],
+        "Novo chamado atribuído",
+        f'Você foi designado para o chamado de TI "{new_ticket.title}".',
+        link="/sectors/ti",
+        actor=current_user,
+    )
         
     await db_session.commit()
     await db_session.refresh(new_ticket, ['assignedTo', 'assignedUsers'])
@@ -183,7 +193,8 @@ async def update_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
         
     now = datetime.utcnow()
-    
+    previous_assignees = {u.id for u in (ticket.assignedUsers or [])}
+
     # Atualiza Status (OPEN -> IN_PROGRESS <-> PAUSED -> RESOLVED)
     if update_data.status:
         new_status = update_data.status
@@ -227,6 +238,14 @@ async def update_ticket(
                 ticket.assignedUsers = [user]
 
     ticket.updatedAt = now
+    notify(
+        db_session,
+        {u.id for u in (ticket.assignedUsers or [])} - previous_assignees,
+        "Novo chamado atribuído",
+        f'{current_user.name} atribuiu a você o chamado de TI "{ticket.title}".',
+        link="/sectors/ti",
+        actor=current_user,
+    )
     
     await db_session.commit()
     await db_session.refresh(ticket, ['assignedTo', 'assignedUsers'])

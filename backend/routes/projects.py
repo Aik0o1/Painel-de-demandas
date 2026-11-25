@@ -13,6 +13,7 @@ import uuid
 router = APIRouter()
 
 from core.utils import parse_date as _parse_date
+from core.notifications import notify
 
 
 def parse_date(v: Optional[str]) -> Optional[datetime]:
@@ -101,6 +102,14 @@ async def create_project(project: ProjectCreate, user: User = Depends(check_perm
         new_project.assignedUsers = users_result.scalars().all()
         
     db_session.add(new_project)
+    notify(
+        db_session,
+        [u.id for u in (new_project.assignedUsers or [])],
+        "Novo projeto atribuído",
+        f'{user.name} incluiu você no projeto "{new_project.title}".',
+        link="/sectors/comunicacao",
+        actor=user,
+    )
     await db_session.commit()
     await db_session.refresh(new_project)
     return format_project(new_project)
@@ -114,6 +123,7 @@ async def update_project(id: str, update_data: ProjectUpdate, user: User = Depen
         raise HTTPException(status_code=404, detail="Project not found")
         
     data = update_data.dict(exclude_unset=True)
+    previous_assignees = {u.id for u in (project.assignedUsers or [])}
     if "title" in data: project.title = data["title"]
     if "description" in data: project.description = data["description"]
     if "priority" in data: project.priority = data["priority"]
@@ -129,6 +139,14 @@ async def update_project(id: str, update_data: ProjectUpdate, user: User = Depen
             project.assignedUsers = []
     
     project.updatedAt = datetime.utcnow()
+    notify(
+        db_session,
+        {u.id for u in (project.assignedUsers or [])} - previous_assignees,
+        "Novo projeto atribuído",
+        f'{user.name} incluiu você no projeto "{project.title}".',
+        link="/sectors/comunicacao",
+        actor=user,
+    )
     await db_session.commit()
     await db_session.refresh(project)
     return format_project(project)

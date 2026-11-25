@@ -5,7 +5,7 @@ import os
 load_dotenv()
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from routes import auth, tickets, weekly_demands, projects, employees, inventory, finance, contracts, processes, registry, couchdb_registro, profiles, demands, sectors, admin, audit_logs, reports, it_reports, users, dashboard, uploads
+from routes import auth, tickets, weekly_demands, projects, employees, inventory, finance, contracts, processes, registry, couchdb_registro, profiles, notifications, demands, sectors, admin, audit_logs, reports, it_reports, users, dashboard, uploads
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -95,6 +95,7 @@ app.include_router(reports.router, prefix="/api/reports", tags=["Exportação de
 app.include_router(it_reports.router, prefix="/api/it-reports", tags=["TI - Relatórios"])
 app.include_router(users.router, prefix="/api/users", tags=["Usuários"])
 app.include_router(uploads.router, prefix="/api/uploads", tags=["Uploads"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notificações"])
 
 # Servir arquivos estáticos (Uploads)
 import os

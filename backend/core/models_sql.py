@@ -338,3 +338,17 @@ class ItReport(Base):
 
     # Relationships
     directory = relationship("ItReportDirectory", back_populates="files")
+
+
+class Notification(Base):
+    """Notificações exibidas no sino do menu (NotificationCenter.tsx)."""
+    __tablename__ = "notifications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    userId: Mapped[str] = mapped_column("userId", ForeignKey("User.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    message: Mapped[str] = mapped_column(Text)
+    type: Mapped[str] = mapped_column(String(20), default="INFO")  # INFO | SUCCESS | WARNING | ERROR
+    link: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    read: Mapped[bool] = mapped_column(Boolean, default=False)
+    createdAt: Mapped[datetime] = mapped_column("createdAt", DateTime, default=datetime.utcnow, index=True)

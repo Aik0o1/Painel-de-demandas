@@ -8,6 +8,7 @@ from core.database_sql import get_db
 from core.models_sql import User, Demand
 from core.security import get_current_user
 from core.limiter import limiter
+from core.notifications import notify, user_id_by_email
 import uuid
 
 router = APIRouter()
@@ -20,6 +21,8 @@ def parse_date(value: Optional[str]) -> Optional[datetime]:
         return _parse_date(value)
     except ValueError:
         raise HTTPException(status_code=422, detail=f"Data inválida: {value}")
+
+STATUS_LABELS = {"pending": "Pendente", "in_progress": "Em Andamento", "completed": "Concluída"}
 
 Priority = Literal["low", "medium", "high", "critical"]
 Status = Literal["pending", "in_progress", "completed"]
@@ -147,6 +150,14 @@ async def create_demand(
             new_demand.assignedUsers = users_res.scalars().all()
 
         db_session.add(new_demand)
+        notify(
+            db_session,
+            [u.id for u in (new_demand.assignedUsers or [])],
+            "Nova demanda atribuída",
+            f'{user.name} atribuiu a você a demanda "{new_demand.title}".',
+            link="/demands",
+            actor=user,
+        )
         await db_session.commit()
         await db_session.refresh(new_demand)
         
@@ -174,7 +185,9 @@ async def update_demand(
         raise HTTPException(status_code=404, detail="Demand not found")
         
     data = update_data.dict(exclude_unset=True)
-    
+    previous_assignees = {u.id for u in (demand.assignedUsers or [])}
+    previous_status = demand.status
+
     if data.get("title"): demand.title = data["title"]
     if "description" in data: demand.description = data["description"]
     if data.get("priority"): demand.priority = data["priority"]
@@ -202,7 +215,28 @@ async def update_demand(
         demand.completedAt = parse_date(data["completed_at"])
 
     demand.updatedAt = datetime.utcnow()
-    
+
+    current_assignees = {u.id for u in (demand.assignedUsers or [])}
+    notify(
+        db_session,
+        current_assignees - previous_assignees,
+        "Nova demanda atribuída",
+        f'{user.name} atribuiu a você a demanda "{demand.title}".',
+        link="/demands",
+        actor=user,
+    )
+    if demand.status != previous_status:
+        creator_id = await user_id_by_email(db_session, demand.createdBy)
+        notify(
+            db_session,
+            {creator_id} | (current_assignees & previous_assignees),
+            "Status de demanda alterado",
+            f'"{demand.title}" foi marcada como {STATUS_LABELS.get(demand.status, demand.status)} por {user.name}.',
+            link="/demands",
+            type="SUCCESS" if demand.status == "completed" else "INFO",
+            actor=user,
+        )
+
     await db_session.commit()
     await db_session.refresh(demand)
     

@@ -253,3 +253,18 @@ enum LoginStatus {
   LOGOUT
   TERMINATED_BY_ADMIN
 }
+
+// Criada pelo backend (core/migrations.py); usada aqui para avisar os admins
+// sobre novos cadastros.
+model Notification {
+  id        String   @id @db.VarChar(36)
+  userId    String
+  title     String   @db.VarChar(255)
+  message   String
+  type      String   @default("INFO") @db.VarChar(20)
+  link      String?  @db.VarChar(255)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+
+  @@map("notifications")
+}

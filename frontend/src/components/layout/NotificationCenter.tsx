@@ -6,12 +6,14 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useRouter } from "next/navigation";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export function NotificationCenter() {
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+    const router = useRouter();
 
     return (
         <Popover>
@@ -46,7 +48,10 @@ export function NotificationCenter() {
                                     key={notification.id}
                                     className={`flex w-full flex-col gap-1 rounded-md p-3 text-left text-sm transition-colors hover:bg-accent ${!notification.read ? "bg-accent/50" : ""
                                         }`}
-                                    onClick={() => markAsRead(notification.id)}
+                                    onClick={() => {
+                                        if (!notification.read) markAsRead(notification.id);
+                                        if (notification.link) router.push(notification.link);
+                                    }}
                                 >
                                     <div className="flex w-full items-center justify-between">
                                         <span className="font-medium">{notification.title}</span>
