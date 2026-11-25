@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { maskCurrency, parseCurrency } from "@/lib/utils";
+import { maskCurrency, parseCurrency, toDateInput } from "@/lib/utils";
 
 import { apiGet, apiPost, apiPut } from "@/services/api";
 
@@ -48,13 +48,7 @@ export function PaymentDialog({ open, onOpenChange, payment }: PaymentDialogProp
                 setDescription(payment.description || "");
                 setAmount(maskCurrency((payment.amount * 100).toString()));
                 setSupplier(payment.supplier || "");
-                // Fix: Ensure date is properly formatted for HTML input (YYYY-MM-DD)
-                if (payment.date) {
-                    const d = new Date(payment.date);
-                    if (!isNaN(d.getTime())) {
-                        setDate(d.toISOString().split('T')[0]);
-                    }
-                }
+                setDate(toDateInput(payment.date));
                 setCategoryId(payment.category_id?.id || payment.category_id?._id || payment.category_id); // Handle populate or raw id
 
                 if (payment.beneficiaries && payment.beneficiaries.length > 0) {

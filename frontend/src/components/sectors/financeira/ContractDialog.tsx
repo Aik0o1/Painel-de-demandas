@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
-import { maskCurrency, parseCurrency } from "@/lib/utils";
+import { maskCurrency, parseCurrency, toDateInput } from "@/lib/utils";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,18 +30,8 @@ export function ContractDialog({ open, onOpenChange, contract, onSave }: Contrac
             setValue("value", maskCurrency((contract.value * 100).toString()));
 
             // Format dates for HTML5 date input (YYYY-MM-DD)
-            if (contract.start_date) {
-                const startDate = new Date(contract.start_date);
-                if (!isNaN(startDate.getTime())) {
-                    setValue("start_date", startDate.toISOString().split('T')[0]);
-                }
-            }
-            if (contract.end_date) {
-                const endDate = new Date(contract.end_date);
-                if (!isNaN(endDate.getTime())) {
-                    setValue("end_date", endDate.toISOString().split('T')[0]);
-                }
-            }
+            setValue("start_date", toDateInput(contract.start_date));
+            setValue("end_date", toDateInput(contract.end_date));
 
             setValue("status", contract.status);
             setFile(null); // Reset file

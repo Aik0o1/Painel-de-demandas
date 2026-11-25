@@ -1,3 +1,4 @@
+import { toDateInput } from "@/lib/utils";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -30,12 +31,7 @@ export function ProcessDialog({ open, onOpenChange, process, onSave }: ProcessDi
             setValue("court", process.court);
 
             // Fix: Format date for HTML input
-            if (process.deadline_date) {
-                const d = new Date(process.deadline_date);
-                if (!isNaN(d.getTime())) {
-                    setValue("deadline_date", d.toISOString().split('T')[0]);
-                }
-            }
+            setValue("deadline_date", toDateInput(process.deadline_date));
 
             setValue("status", process.status);
             setValue("description", process.description);

@@ -1,3 +1,4 @@
+import { toDateInput } from "@/lib/utils";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -31,12 +32,7 @@ export function RegistryDialog({ open, onOpenChange, item, onSave }: RegistryDia
             setValue("party_name", item.party_name);
 
             // Fix: Format date for HTML input
-            if (item.deadline_date) {
-                const d = new Date(item.deadline_date);
-                if (!isNaN(d.getTime())) {
-                    setValue("deadline_date", d.toISOString().split('T')[0]);
-                }
-            }
+            setValue("deadline_date", toDateInput(item.deadline_date));
 
             setValue("status", item.status);
             setValue("notes", item.notes);

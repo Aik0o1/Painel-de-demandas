@@ -33,3 +33,14 @@ export function parseCurrency(value: string): number {
   // Remove pontos (milhar) e troca vírgula por ponto (decimal)
   return parseFloat(value.replace(/\./g, "").replace(",", "."));
 }
+
+/**
+ * Converte uma data do backend ("2026-11-30T00:00:00") para o formato aceito
+ * por <input type="date"> ("2026-11-30"). Sempre retorna string ("" quando não
+ * há data), para que o campo seja limpo ao trocar de registro no formulário.
+ */
+export function toDateInput(value?: string | null): string {
+  if (!value) return "";
+  const match = String(value).match(/^\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : "";
+}

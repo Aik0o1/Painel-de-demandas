@@ -1,3 +1,4 @@
+import { toDateInput } from "@/lib/utils";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -25,8 +26,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave }: Employe
             setValue("full_name", employee.full_name);
             setValue("position", employee.position);
             setValue("department", employee.department);
-            // <input type="date"> só aceita "YYYY-MM-DD"; o backend devolve ISO completo.
-            setValue("admission_date", employee.admission_date ? String(employee.admission_date).slice(0, 10) : "");
+            setValue("admission_date", toDateInput(employee.admission_date));
             setValue("status", employee.status);
         } else {
             reset();

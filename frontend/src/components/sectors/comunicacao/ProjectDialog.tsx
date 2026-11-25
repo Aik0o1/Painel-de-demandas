@@ -1,3 +1,4 @@
+import { toDateInput } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog } from "@/components/ui/dialog";
@@ -40,18 +41,8 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
             setValue("description", project.description);
 
             // Format dates for HTML5 date input (YYYY-MM-DD)
-            if (project.start_date) {
-                const startDate = new Date(project.start_date);
-                if (!isNaN(startDate.getTime())) {
-                    setValue("start_date", startDate.toISOString().split('T')[0]);
-                }
-            }
-            if (project.end_date) {
-                const endDate = new Date(project.end_date);
-                if (!isNaN(endDate.getTime())) {
-                    setValue("end_date", endDate.toISOString().split('T')[0]);
-                }
-            }
+            setValue("start_date", toDateInput(project.start_date));
+            setValue("end_date", toDateInput(project.end_date));
 
             setValue("status", project.status);
             setValue("priority", project.priority);
