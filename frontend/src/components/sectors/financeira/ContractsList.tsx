@@ -76,12 +76,15 @@ export function ContractsList() {
                 <h3 className="text-xl font-semibold">Contratos Ativos</h3>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={() => {
+                        // ";" e BOM UTF-8 para o Excel em pt-BR abrir com colunas e acentos corretos;
+                        // campos entre aspas para não quebrar com vírgulas/; no texto.
+                        const cell = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
                         const headers = ["Título", "Fornecedor", "Valor", "Status"];
                         const csvContent = [
-                            headers.join(","),
-                            ...contracts.map((c: any) => [c.title, c.supplier, c.value, c.status].join(","))
-                        ].join("\n");
-                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            headers.map(cell).join(";"),
+                            ...contracts.map((c: any) => [c.title, c.supplier, c.value, c.status].map(cell).join(";"))
+                        ].join("\r\n");
+                        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
                         const link = document.createElement("a");
                         link.href = URL.createObjectURL(blob);
                         link.download = "contratos.csv";
