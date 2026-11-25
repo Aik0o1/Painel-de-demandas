@@ -33,7 +33,7 @@ interface CreateDemandInput {
   priority: DemandPriority;
   assigned_to?: string;
   assigned_user_ids?: string[];
-  due_date?: string;
+  due_date?: string | null;
 }
 
 interface UpdateDemandInput {
@@ -69,10 +69,10 @@ export function useDemands() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['demands'] });
-      toast.success('Demand created successfully');
+      toast.success('Demanda criada com sucesso');
     },
     onError: (error: any) => {
-      toast.error('Failed to create demand: ' + error.message);
+      toast.error('Erro ao criar demanda: ' + error.message);
     },
   });
 
@@ -82,10 +82,10 @@ export function useDemands() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['demands'] });
-      toast.success('Demand updated successfully');
+      toast.success('Demanda atualizada com sucesso');
     },
     onError: (error: any) => {
-      toast.error('Failed to update demand: ' + error.message);
+      toast.error('Erro ao atualizar demanda: ' + error.message);
     },
   });
 
@@ -95,10 +95,10 @@ export function useDemands() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['demands'] });
-      toast.success('Demand deleted successfully');
+      toast.success('Demanda excluída com sucesso');
     },
     onError: (error: any) => {
-      toast.error('Failed to delete demand: ' + error.message);
+      toast.error('Erro ao excluir demanda: ' + error.message);
     },
   });
 

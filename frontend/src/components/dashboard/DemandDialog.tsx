@@ -22,6 +22,8 @@ interface DemandDialogProps {
   isLoading: boolean;
   isLoadingProfiles?: boolean;
   readOnly?: boolean;
+  /** Mostrado no modo leitura para alternar para edição. */
+  onEdit?: () => void;
 }
 
 export interface DemandFormData {
@@ -31,7 +33,8 @@ export interface DemandFormData {
   status?: DemandStatus;
   assigned_to?: string;
   assigned_user_ids: string[];
-  due_date?: string;
+  /** null remove o prazo ao editar. */
+  due_date?: string | null;
 }
 
 export function DemandDialog({
@@ -43,6 +46,7 @@ export function DemandDialog({
   isLoading,
   isLoadingProfiles,
   readOnly = false,
+  onEdit,
 }: DemandDialogProps) {
   const [form, setForm] = useState<DemandFormData>({
     title: '',
@@ -80,7 +84,8 @@ export function DemandDialog({
     if (readOnly) return;
     onSubmit({
       ...form,
-      due_date: dueDate?.toISOString(),
+      // Ao editar, enviar null explicitamente para que o backend remova o prazo.
+      due_date: dueDate ? dueDate.toISOString() : (demand ? null : undefined),
     });
   };
 
@@ -299,6 +304,22 @@ export function DemandDialog({
                       }}
                       initialFocus
                     />
+                    {dueDate && (
+                      <div className="border-t border-border p-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            setDueDate(undefined);
+                            setCalendarOpen(false);
+                          }}
+                        >
+                          Remover prazo
+                        </Button>
+                      </div>
+                    )}
                   </PopoverContent>
                 )}
               </Popover>
@@ -323,9 +344,16 @@ export function DemandDialog({
               </Button>
             )}
             {readOnly ? (
-              <FuturisticButton type="button" onClick={() => onOpenChange(false)}>
-                Fechar
-              </FuturisticButton>
+              <>
+                {onEdit && (
+                  <Button type="button" variant="outline" onClick={onEdit}>
+                    Editar
+                  </Button>
+                )}
+                <FuturisticButton type="button" onClick={() => onOpenChange(false)}>
+                  Fechar
+                </FuturisticButton>
+              </>
             ) : (
               <FuturisticButton type="submit" isLoading={isLoading}>
                 {demand ? 'Atualizar' : 'Registrar'}

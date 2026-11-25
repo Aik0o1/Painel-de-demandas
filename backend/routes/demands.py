@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Header, Depends, Request
 from pydantic import BaseModel
-from typing import List, Optional, Any, Dict
-from datetime import datetime
+from typing import List, Optional, Any, Dict, Literal
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from core.database_sql import get_db
@@ -12,10 +12,27 @@ import uuid
 
 router = APIRouter()
 
+Priority = Literal["low", "medium", "high", "critical"]
+Status = Literal["pending", "in_progress", "completed"]
+
+
+def parse_date(value: Optional[str]) -> Optional[datetime]:
+    """Converte ISO 8601 (com ou sem 'Z') para datetime naive em UTC."""
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Data inválida: {value}")
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 class DemandCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    priority: str
+    priority: Priority = "medium"
     assigned_to: Optional[str] = None
     assigned_user_ids: Optional[List[str]] = []
     due_date: Optional[str] = None
@@ -23,8 +40,8 @@ class DemandCreate(BaseModel):
 class DemandUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    priority: Optional[str] = None
-    status: Optional[str] = None
+    priority: Optional[Priority] = None
+    status: Optional[Status] = None
     assigned_to: Optional[str] = None
     assigned_user_ids: Optional[List[str]] = None
     due_date: Optional[str] = None
@@ -69,9 +86,13 @@ async def format_demand(demand: Demand, db_session: AsyncSession):
         "completedAt": demand.completedAt.isoformat() if demand.completedAt else None,
     }
     
-    # Legacy field names
-    data["assigned_to"] = demand.assignedTo
-    data["created_at"] = demand.createdAt.isoformat() if demand.createdAt else None
+    # Nomes em snake_case usados pelo frontend (hooks/useDemands.tsx)
+    data["assigned_to"] = data["assignedTo"]
+    data["due_date"] = data["dueDate"]
+    data["created_by"] = data["createdBy"]
+    data["created_at"] = data["createdAt"]
+    data["updated_at"] = data["updatedAt"]
+    data["completed_at"] = data["completedAt"]
     
     data["creator"] = await populate_user(demand.createdBy, db_session)
     data["assignee"] = await populate_user(demand.assignedTo, db_session)
@@ -110,13 +131,7 @@ async def create_demand(
     db_session: AsyncSession = Depends(get_db)
 ):
     try:
-        due_date = None
-        if demand.due_date:
-            try:
-                dt = datetime.fromisoformat(demand.due_date.replace("Z", "+00:00"))
-                due_date = dt.replace(tzinfo=None)
-            except:
-                due_date = None
+        due_date = parse_date(demand.due_date)
 
         new_demand = Demand(
             id=str(uuid.uuid4()),
@@ -140,6 +155,8 @@ async def create_demand(
         await db_session.refresh(new_demand)
         
         return await format_demand(new_demand, db_session)
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         print(f"CRITICAL ERROR in create_demand: {e}")
@@ -162,14 +179,16 @@ async def update_demand(
         
     data = update_data.dict(exclude_unset=True)
     
-    if "title" in data: demand.title = data["title"]
+    if data.get("title"): demand.title = data["title"]
     if "description" in data: demand.description = data["description"]
-    if "priority" in data: demand.priority = data["priority"]
-    if "status" in data:
+    if data.get("priority"): demand.priority = data["priority"]
+    if "status" in data and data["status"] is not None:
         old_status = demand.status
         demand.status = data["status"]
         if demand.status == "completed" and old_status != "completed":
             demand.completedAt = datetime.utcnow()
+        elif demand.status != "completed":
+            demand.completedAt = None
     if "assigned_to" in data: demand.assignedTo = data["assigned_to"]
     
     if "assigned_user_ids" in data and data["assigned_user_ids"] is not None:
@@ -181,19 +200,10 @@ async def update_demand(
             demand.assignedUsers = []
 
     if "due_date" in data:
-        if data["due_date"]:
-            try:
-                dt = datetime.fromisoformat(data["due_date"].replace("Z", "+00:00"))
-                demand.dueDate = dt.replace(tzinfo=None)
-            except:
-                pass
-    if "completed_at" in data:
-        if data["completed_at"]:
-            try:
-                dt = datetime.fromisoformat(data["completed_at"].replace("Z", "+00:00"))
-                demand.completedAt = dt.replace(tzinfo=None)
-            except:
-                pass
+        # null/"" remove o prazo
+        demand.dueDate = parse_date(data["due_date"])
+    if "completed_at" in data and data["completed_at"]:
+        demand.completedAt = parse_date(data["completed_at"])
 
     demand.updatedAt = datetime.utcnow()
     

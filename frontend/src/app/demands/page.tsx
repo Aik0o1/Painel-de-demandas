@@ -11,8 +11,13 @@ import { ptBR } from 'date-fns/locale';
 import {
     Search, SlidersHorizontal, Calendar,
     AlertTriangle, MessageSquare, Paperclip,
-    CheckCircle2, Plus
+    CheckCircle2, Plus, MoreVertical, Pencil, Trash2, Clock, PlayCircle
 } from 'lucide-react';
+import {
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+    DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -75,22 +80,34 @@ export default function DemandsPage() {
 
     const handleDelete = async (id: string) => {
         if (confirm('Tem certeza que deseja excluir esta demanda?')) {
-            await deleteDemand.mutateAsync(id);
+            try {
+                await deleteDemand.mutateAsync(id);
+            } catch {
+                // toast exibido pelo hook
+            }
         }
     };
 
     const handleStatusChange = async (demandId: string, status: string) => {
-        await updateDemand.mutateAsync({ id: demandId, status: status as any });
+        try {
+            await updateDemand.mutateAsync({ id: demandId, status: status as any });
+        } catch {
+            // toast exibido pelo hook
+        }
     };
 
     const handleSubmit = async (data: any) => {
-        if (editingDemand) {
-            await updateDemand.mutateAsync({ id: editingDemand.id, ...data });
-        } else {
-            await createDemand.mutateAsync(data);
+        try {
+            if (editingDemand) {
+                await updateDemand.mutateAsync({ id: editingDemand.id, ...data });
+            } else {
+                await createDemand.mutateAsync(data);
+            }
+            setDialogOpen(false);
+            setEditingDemand(null);
+        } catch {
+            // Erro já exibido pelo toast do hook; mantém o diálogo aberto.
         }
-        setDialogOpen(false);
-        setEditingDemand(null);
     };
 
     return (
@@ -213,6 +230,7 @@ export default function DemandsPage() {
                                             {formatDistanceToNow(new Date(demand.created_at), { addSuffix: true, locale: ptBR })}
                                         </span>
                                     </div>
+                                    <div className="flex items-center">
                                     <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 border ${demand.status === 'in_progress'
                                         ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
                                         : demand.priority === 'critical'
@@ -226,6 +244,39 @@ export default function DemandsPage() {
                                         {demand.status === 'completed' ? 'Concluída' :
                                             demand.status === 'in_progress' ? 'Em Andamento' :
                                                 demand.status === 'pending' ? 'Pendente' : demand.status}
+                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="relative z-10 ml-1 p-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                aria-label="Ações da demanda"
+                                            >
+                                                <MoreVertical className="w-4 h-4" />
+                                            </button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                            <DropdownMenuItem onSelect={() => handleEdit(demand)}>
+                                                <Pencil className="mr-2 h-4 w-4" /> Editar
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuLabel className="text-xs text-muted-foreground">Alterar status</DropdownMenuLabel>
+                                            <DropdownMenuItem disabled={demand.status === 'pending'} onSelect={() => handleStatusChange(demand.id, 'pending')}>
+                                                <Clock className="mr-2 h-4 w-4" /> Pendente
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem disabled={demand.status === 'in_progress'} onSelect={() => handleStatusChange(demand.id, 'in_progress')}>
+                                                <PlayCircle className="mr-2 h-4 w-4" /> Em Andamento
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem disabled={demand.status === 'completed'} onSelect={() => handleStatusChange(demand.id, 'completed')}>
+                                                <CheckCircle2 className="mr-2 h-4 w-4" /> Concluída
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem className="text-red-600 focus:text-red-600" onSelect={() => handleDelete(demand.id)}>
+                                                <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                     </div>
                                 </div>
 
@@ -246,6 +297,12 @@ export default function DemandsPage() {
                                         ))}
                                     </div>
                                     <div className="flex items-center gap-4">
+                                        {demand.due_date && (
+                                            <div className={`flex items-center gap-1 text-xs ${demand.status !== 'completed' && new Date(demand.due_date) < startOfDay(new Date()) ? 'text-red-500 font-semibold' : 'text-gray-500 dark:text-muted-foreground'}`}>
+                                                <Clock className="w-3.5 h-3.5" />
+                                                <span>Prazo: {format(new Date(demand.due_date), 'dd/MM/yyyy')}</span>
+                                            </div>
+                                        )}
                                         <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-muted-foreground group-hover:text-blue-400 transition-colors">
                                             <MessageSquare className="w-3.5 h-3.5" />
                                             <span>0</span>
@@ -271,6 +328,7 @@ export default function DemandsPage() {
                     isLoading={updateDemand.isPending || createDemand.isPending}
                     isLoadingProfiles={isLoadingProfiles}
                     readOnly={isViewing}
+                    onEdit={() => setIsViewing(false)}
                 />
             </div>
         </DashboardLayout>
