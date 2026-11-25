@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload, joinedload
 from core.database_sql import get_db
+from core.security import get_current_user
 from core.models_sql import (
-    Demand, Ticket, Process, Project, FinanceTransaction, RegistryEntry
+    Demand, Ticket, Process, Project, FinanceTransaction, RegistryEntry, User
 )
 from datetime import datetime, timedelta
 
@@ -78,7 +79,7 @@ def normalize_priority(raw: str) -> str:
 # ────────────────────────────────────────────────────────
 
 @router.get("/all-items")
-async def get_all_items(db_session: AsyncSession = Depends(get_db)):
+async def get_all_items(user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
     """
     Agrega itens de TODOS os setores num formato canônico:
     - Demandas Globais  (setor: geral)
@@ -276,7 +277,7 @@ async def get_all_items(db_session: AsyncSession = Depends(get_db)):
 # ────────────────────────────────────────────────────────
 
 @router.get("/metrics")
-async def get_dashboard_metrics(db_session: AsyncSession = Depends(get_db)):
+async def get_dashboard_metrics(user: User = Depends(get_current_user), db_session: AsyncSession = Depends(get_db)):
     """
     Retorna métricas agregadas de TODOS os setores.
     """
