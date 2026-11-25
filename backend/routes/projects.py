@@ -68,7 +68,7 @@ async def get_comunicacao_users(user: User = Depends(get_current_user), db_sessi
     if not sector:
         return []
         
-    users_result = await db_session.execute(select(User).where(User.sectorId == sector.id))
+    users_result = await db_session.execute(select(User).where(User.sector_id == sector.id))
     users = users_result.scalars().all()
     return [{"id": u.id, "name": u.name} for u in users]
 
