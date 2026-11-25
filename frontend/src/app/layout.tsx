@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     title: "PAINEL DE DEMANDAS",
     description: "Internal Demand Management System",
     icons: {
-        icon: '/favicon.ico',
+        icon: '/favicon.png',
     }
 };
 
