@@ -292,6 +292,8 @@ async def get_pdf_report(month: Optional[int] = None, year: Optional[int] = None
             media_type="application/pdf", 
             headers={"Content-Disposition": f'attachment; filename="relatorio_registro_{target_id}.pdf"'}
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
