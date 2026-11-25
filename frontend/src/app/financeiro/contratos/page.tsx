@@ -1,7 +1,7 @@
 'use client';
 
+import { apiGet, apiPost, apiPut, apiDelete } from '@/services/api';
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { 
   Plus, 
   Search, 
@@ -39,7 +39,6 @@ interface Sector {
 }
 
 export default function ContratosPage() {
-  const { data: session } = useSession();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,8 +55,6 @@ export default function ContratosPage() {
     status: 'ACTIVE'
   });
 
-  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
   useEffect(() => {
     fetchContracts();
     fetchSectors();
@@ -65,15 +62,7 @@ export default function ContratosPage() {
 
   const fetchContracts = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/contracts`, {
-        headers: {
-          'Authorization': `Bearer ${session?.accessToken}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setContracts(data);
-      }
+      setContracts(await apiGet('/contracts'));
     } catch (error) {
       console.error('Erro ao buscar contratos:', error);
     } finally {
@@ -83,11 +72,7 @@ export default function ContratosPage() {
 
   const fetchSectors = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/sectors`);
-      if (response.ok) {
-        const data = await response.json();
-        setSectors(data);
-      }
+      setSectors(await apiGet('/sectors'));
     } catch (error) {
       console.error('Erro ao buscar setores:', error);
     }
@@ -132,39 +117,25 @@ export default function ContratosPage() {
     setLoading(true);
 
     try {
-      const url = isEditMode 
-        ? `${API_BASE_URL}/contracts/${selectedContract?.id}`
-        : `${API_BASE_URL}/contracts`;
-      
-      const method = isEditMode ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.accessToken}`
-        },
-        body: JSON.stringify({
-          title: formData.title,
-          supplier: formData.supplier,
-          value: parseFloat(formData.value),
-          start_date: formData.startDate || null,
-          end_date: formData.endDate || null,
-          sector_id: formData.sector_id || null,
-          status: formData.status
-        })
-      });
-
-      if (response.ok) {
-        setIsModalOpen(false);
-        fetchContracts();
+      const payload = {
+        title: formData.title,
+        supplier: formData.supplier,
+        value: parseFloat(formData.value),
+        start_date: formData.startDate || null,
+        end_date: formData.endDate || null,
+        sector_id: formData.sector_id || null,
+        status: formData.status
+      };
+      if (isEditMode) {
+        await apiPut(`/contracts/${selectedContract?.id}`, payload);
       } else {
-        const errorData = await response.json();
-        alert(`Erro: ${errorData.detail || 'Não foi possível salvar o contrato'}`);
+        await apiPost('/contracts', payload);
       }
+      setIsModalOpen(false);
+      fetchContracts();
     } catch (error) {
+      // api.ts já exibe o erro em um toast
       console.error('Erro ao salvar contrato:', error);
-      alert('Erro de conexão com o servidor');
     } finally {
       setLoading(false);
     }
@@ -174,16 +145,8 @@ export default function ContratosPage() {
     if (!confirm('Deseja realmente remover este contrato?')) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/contracts/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session?.accessToken}`
-        }
-      });
-
-      if (response.ok) {
-        fetchContracts();
-      }
+      await apiDelete(`/contracts/${id}`);
+      fetchContracts();
     } catch (error) {
       console.error('Erro ao deletar contrato:', error);
     }
