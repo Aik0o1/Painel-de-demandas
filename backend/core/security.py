@@ -5,7 +5,7 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from core.database_sql import get_db
-from core.models_sql import User, UserStatus
+from core.models_sql import User, UserStatus, Session
 
 SECRET_KEY = os.getenv("NEXTAUTH_SECRET")
 if not SECRET_KEY:
@@ -49,6 +49,15 @@ async def get_current_user(
 
     if user.status != UserStatus.ACTIVE:
         raise HTTPException(status_code=403, detail="Usuário sem acesso ativo")
+
+    # Sessão encerrada (logout ou "Encerrar sessão" no painel admin)
+    sid = payload.get("sid")
+    if sid:
+        session_result = await db_session.execute(
+            select(Session.isActive).where(Session.sessionId == sid)
+        )
+        if not session_result.scalar_one_or_none():
+            raise HTTPException(status_code=401, detail="Sessão encerrada")
 
     request.state.user_id = user.id
     return user

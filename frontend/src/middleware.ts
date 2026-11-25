@@ -23,7 +23,8 @@ async function readSession(req: NextRequest): Promise<JWT | null> {
 /** Token curto (HS256) que o FastAPI valida em core/security.py. */
 async function signBackendToken(session: JWT): Promise<string> {
     const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
-    return new SignJWT({ email: session.email, role: session.role })
+    // sid permite ao backend recusar sessões encerradas pelo admin ou no logout.
+    return new SignJWT({ email: session.email, role: session.role, sid: session.sessionId ?? null })
         .setProtectedHeader({ alg: "HS256" })
         .setSubject(String(session.id ?? session.sub ?? ""))
         .setIssuedAt()
