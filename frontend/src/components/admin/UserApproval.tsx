@@ -20,8 +20,10 @@ import {
     Landmark,
     Save,
     X,
-    Check
+    Check,
+    KeyRound
 } from "lucide-react";
+import { ResetPasswordDialog } from "./ResetPasswordDialog";
 import {
     Select,
     SelectContent,
@@ -91,6 +93,7 @@ export function UserApproval({ user, isOpen, onClose }: UserApprovalProps) {
     const [role, setRole] = useState<string>(user?.role || 'ANALYST');
     const [sectorId, setSectorId] = useState<string>(user?.sector_id || 'none');
     const [permissions, setPermissions] = useState<any>(user?.permissions || {});
+    const [resetOpen, setResetOpen] = useState(false);
 
     useEffect(() => {
         if (user && isOpen) {
@@ -108,7 +111,8 @@ export function UserApproval({ user, isOpen, onClose }: UserApprovalProps) {
             toast.success("Usuário atualizado com sucesso");
             onClose();
         },
-        onError: () => toast.error("Erro ao atualizar usuário")
+        // Mostra o motivo retornado pelo backend (ex.: 403 de permissão).
+        onError: (error: any) => toast.error(error?.message || "Erro ao atualizar usuário")
     });
 
     const handleSave = () => {
@@ -242,6 +246,10 @@ export function UserApproval({ user, isOpen, onClose }: UserApprovalProps) {
                                 <Save className="w-4 h-4 mr-2" />
                                 {updateMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
                             </Button>
+                            <Button variant="outline" className="w-full" onClick={() => setResetOpen(true)}>
+                                <KeyRound className="w-4 h-4 mr-2" />
+                                Redefinir senha
+                            </Button>
                             <Button variant="outline" className="w-full" onClick={onClose}>
                                 Cancelar
                             </Button>
@@ -311,6 +319,7 @@ export function UserApproval({ user, isOpen, onClose }: UserApprovalProps) {
                     </section>
                 </div>
             </DialogContent>
+            <ResetPasswordDialog open={resetOpen} onOpenChange={setResetOpen} user={user} />
         </Dialog>
     );
 }
